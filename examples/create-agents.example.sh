@@ -19,7 +19,7 @@
 set -euo pipefail
 
 # ── User-tunable ──
-WORKSPACE_NAME="${WORKSPACE_NAME:-wangbo-team}"
+WORKSPACE_NAME="${WORKSPACE_NAME:-my-team}"
 AGENT_TYPES="${AGENT_TYPES:-hermes,claude,opencode}"
 AGN="${AGN:-$HOME/.openagents/nodejs/node_modules/.bin/agn}"
 

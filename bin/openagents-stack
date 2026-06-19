@@ -220,22 +220,25 @@ openagents-stack: one-click local setup for openagents
 Usage: openagents-stack [command]
 
 Commands:
-  (default)        Full setup (idempotent)
-  --status         Show backend / agents / upstream version
+  (default)        Full setup (idempotent, dependencies only)
+  --check          Run preflight checks (no changes)
+  --start          Start the docker backend
   --stop           Stop docker backend
-  --clean          Stop + delete volumes (DATA LOSS)
-  --reset          Clear local state, re-run all steps
+  --restart        Restart docker backend
+  --logs           Tail docker backend logs (Ctrl-C to exit)
+  --status         Show backend / agents / upstream version
   --upgrade        Show latest upstream + ask to upgrade
   --upgrade --to   Pin to specific launcher tag
+  --clean          Stop + delete volumes (DATA LOSS)
+  --reset          Clear local state, re-run all steps
   --dry-run        Print plan, change nothing
-  --check          Run preflight checks (no changes)
   --help           This help
 
 Environment:
   OPENAGENTS_HOME           monorepo dir (default ~/openagents)
   OPENAGENTS_STACK_HOME     this repo state (default ~/openagents-stack)
   OPENAGENTS_BACKEND_PORT   backend port (default 8000)
-  WORKSPACE_NAME            workspace name (default wangbo-team)
+  WORKSPACE_NAME            workspace name (default my-team)
   AGENT_TYPES               comma-separated (default hermes,claude,opencode)
   DOCKER_RUNTIME            macOS: orbstack|docker (default: ask)
 EOF

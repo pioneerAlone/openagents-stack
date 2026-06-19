@@ -7,7 +7,7 @@
 : "${OPENAGENTS_BACKEND_PORT:=8000}"
 
 # ── User-tunable defaults ──
-: "${WORKSPACE_NAME:=wangbo-team}"
+: "${WORKSPACE_NAME:=my-team}"
 : "${AGENT_TYPES:=hermes,claude,opencode}"
 : "${DOCKER_RUNTIME:=}"  # macOS: orbstack|docker (empty = ask)
 

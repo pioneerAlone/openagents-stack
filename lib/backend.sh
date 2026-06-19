@@ -9,6 +9,17 @@ get_backend_container() {
   docker ps -a --filter "label=com.docker.compose.project=openagents" --filter "label=com.docker.compose.service=backend" --format "{{.Names}}" 2>/dev/null | head -1
 }
 
+# Probe backend health across known endpoint shapes
+# Returns 0 if any endpoint responds 2xx/3xx, 1 otherwise
+probe_backend_health() {
+  for path in "/health" "/api/health" "/api/v1/health" "/healthz" "/v1/events" "/api/v1/events"; do
+    if curl -sf --max-time 3 "http://localhost:${OPENAGENTS_BACKEND_PORT}${path}" >/dev/null 2>&1; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 # Helper: check if backend is currently running and healthy
 # Note: we probe multiple endpoints because upstream's health endpoint
 # has changed across releases (e.g. /api/health, /api/v1/health, /healthz)
@@ -24,13 +35,7 @@ backend_already_running() {
   if [[ "$state" != "true" ]]; then
     return 1
   fi
-  # Probe known health endpoints
-  for path in "/api/health" "/api/v1/health" "/healthz" "/health"; do
-    if curl -sf --max-time 3 "http://localhost:${OPENAGENTS_BACKEND_PORT}${path}" >/dev/null 2>&1; then
-      return 0
-    fi
-  done
-  return 1
+  probe_backend_health
 }
 
 step_start_backend() {
@@ -86,14 +91,14 @@ step_start_backend() {
   # 3c. Wait for health
   log "  Waiting for backend health (max 60s)..."
   for i in {1..30}; do
-    if curl -sf "http://localhost:$OPENAGENTS_BACKEND_PORT/api/health" >/dev/null 2>&1; then
+    if probe_backend_health; then
       ok "Backend healthy on port $OPENAGENTS_BACKEND_PORT"
       break
     fi
     sleep 2
   done
 
-  if ! curl -sf "http://localhost:$OPENAGENTS_BACKEND_PORT/api/health" >/dev/null 2>&1; then
+  if ! probe_backend_health; then
     # Get the REAL container name (handles project prefix)
     local real_container
     real_container=$(get_backend_container)

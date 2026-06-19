@@ -2,11 +2,23 @@
 # Source: `source lib/upstream_check.sh`
 
 # ── Get latest launcher tag from GitHub ──
+# Returns the raw tag_name string (e.g. "launcher-v0.8.6") or empty string.
 get_latest_launcher_tag() {
-  curl -sf "https://api.github.com/repos/openagents-org/openagents/releases/latest" 2>/dev/null \
-    | grep -oE '"tag_name":\s*"[^"]+"' \
-    | head -1 \
-    | sed 's/.*"tag_name":\s*"\([^"]*\)".*/\1/' || echo ""
+  local response
+  response=$(curl -sf "https://api.github.com/repos/openagents-org/openagents/releases/latest" 2>/dev/null)
+  if [[ -z "$response" ]]; then
+    echo ""
+    return
+  fi
+  # Use python3 for reliable JSON parsing (avoids grep regex bugs)
+  echo "$response" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print(d.get('tag_name', ''))
+except Exception:
+    pass
+" 2>/dev/null
 }
 
 # ── Check upstream and warn (idempotent, called at startup) ──

@@ -2,11 +2,21 @@
 # Source: `source lib/verify.sh`
 
 show_status() {
-  # Backend health
-  if curl -sf "http://localhost:$OPENAGENTS_BACKEND_PORT/api/health" >/dev/null 2>&1; then
-    ok "Backend:    healthy on :$OPENAGENTS_BACKEND_PORT"
+  # Backend health (probe multiple endpoints because upstream changed health paths)
+  # /v1/events is what launcher actually probes and gets 200 when healthy
+  local backend_ok=false
+  local matched_path=""
+  for path in "/health" "/api/health" "/api/v1/health" "/healthz" "/v1/events" "/api/v1/events"; do
+    if curl -sf --max-time 3 "http://localhost:${OPENAGENTS_BACKEND_PORT}${path}" >/dev/null 2>&1; then
+      backend_ok=true
+      matched_path="$path"
+      break
+    fi
+  done
+  if $backend_ok; then
+    ok "Backend:    healthy on :$OPENAGENTS_BACKEND_PORT (via $matched_path)"
   else
-    warn "Backend:   not responding"
+    warn "Backend:   not responding on :$OPENAGENTS_BACKEND_PORT"
   fi
 
   # Docker containers
