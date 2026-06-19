@@ -1,0 +1,259 @@
+#!/usr/bin/env bash
+# ============================================================
+# openagents-stack: one-click local setup (v0.1, macOS)
+# Repo:   github.com/pioneerAlone/openagents-stack
+# Branch: main
+# Scope:  launcher + docker backend + workspace + agents
+# ============================================================
+set -euo pipefail
+IFS=$'\n\t'
+
+# ── Source libs FIRST (so log/ok/err/have are available) ──
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+LIB_DIR="$ROOT_DIR/lib"
+PLATFORM_DIR="$ROOT_DIR/platform"
+
+# Set OPENAGENTS_STACK_HOME so child libs can find it (no BASH_SOURCE trickery needed)
+export OPENAGENTS_STACK_HOME="$ROOT_DIR"
+
+# shellcheck source=lib/common.sh
+source "$LIB_DIR/common.sh"
+# shellcheck source=lib/config.sh
+source "$LIB_DIR/config.sh"
+# shellcheck source=lib/upstream_check.sh
+source "$LIB_DIR/upstream_check.sh"
+# shellcheck source=lib/upgrade.sh
+source "$LIB_DIR/upgrade.sh"
+# shellcheck source=lib/docker.sh
+source "$LIB_DIR/docker.sh"
+# shellcheck source=lib/backend.sh
+source "$LIB_DIR/backend.sh"
+# shellcheck source=lib/launcher.sh
+source "$LIB_DIR/launcher.sh"
+# agents.sh moved to examples/create-agents.example.sh (user runs it manually)
+# shellcheck source=lib/verify.sh
+source "$LIB_DIR/verify.sh"
+# shellcheck source=lib/selfcheck.sh
+source "$LIB_DIR/selfcheck.sh"
+# shellcheck source=lib/env.sh
+source "$LIB_DIR/env.sh"
+# shellcheck source=lib/checks.sh
+source "$LIB_DIR/checks.sh"
+
+# ── Platform detection ──
+detect_platform
+log "Platform: $PLATFORM"
+
+# ── Source platform-specific (provides install_<step>_<PLATFORM> functions) ──
+case "$PLATFORM" in
+  macos)
+    source "$PLATFORM_DIR/macos/install_docker.sh"
+    source "$PLATFORM_DIR/macos/install_launcher.sh"
+    ;;
+  linux)
+    source "$PLATFORM_DIR/linux/install_docker.sh"
+    source "$PLATFORM_DIR/linux/install_launcher.sh"
+    ;;
+  windows-bash)
+    source "$PLATFORM_DIR/windows/install_docker.sh"
+    source "$PLATFORM_DIR/windows/install_launcher.sh"
+    ;;
+esac
+
+# ── Cross-platform dispatchers (call platform-specific function) ──
+step_install_docker() {
+  log "[1/5] Install Docker ($PLATFORM)"
+
+  # Always check actual state (not just state file)
+  if docker_available; then
+    ok "Docker already available: $(docker --version)"
+    done_step step_install_docker
+    return 0
+  fi
+
+  case "$PLATFORM" in
+    macos|linux|windows-bash) install_docker_$PLATFORM ;;
+    *) err "Unsupported platform: $PLATFORM" ;;
+  esac
+
+  docker_available || err "Docker installation failed; docker not available"
+  ok "Docker ready: $(docker --version)"
+  done_step step_install_docker
+}
+
+# ── Commands ──
+cmd_setup() {
+  echo "============================================"
+  echo "  openagents-stack setup (v0.1)"
+  echo "  Monorepo:   $OPENAGENTS_HOME"
+  echo "  Backend:    http://localhost:$OPENAGENTS_BACKEND_PORT"
+  echo "============================================"
+  echo ""
+  echo "  This installs dependencies only."
+  echo "  To start the backend, run: openagents-stack --start"
+  echo ""
+
+  step_check_prereq
+  step_install_docker
+  step_install_launcher
+  write_all_env          # ← Write env vars to ~/.zshrc
+  # step_start_backend REMOVED: user controls start/stop via --start/--stop
+  print_summary
+}
+
+cmd_status() {
+  echo "============================================"
+  echo "  openagents-stack status"
+  echo "============================================"
+  show_status
+}
+
+cmd_start() {
+  step_start_backend
+  ok "Backend started. To view logs: openagents-stack --logs"
+}
+
+cmd_stop() {
+  step_stop_backend
+}
+
+cmd_restart() {
+  log "Restarting backend..."
+  step_stop_backend
+  sleep 2
+  step_start_backend
+  ok "Backend restarted"
+}
+
+cmd_logs() {
+  if [[ ! -d "$OPENAGENTS_HOME/workspace" ]]; then
+    err "Monorepo not cloned at $OPENAGENTS_HOME. Run: openagents-stack first."
+  fi
+  log "Tailing backend logs (Ctrl-C to exit)..."
+  cd "$OPENAGENTS_HOME/workspace"
+  docker compose -p openagents logs -f --tail 50 backend
+}
+
+cmd_clean() {
+  warn "This will DELETE all backend data (postgres volume)"
+  read -rp "Continue? (y/n): " ans
+  [[ "$ans" == "y" ]] || { log "Aborted"; return 0; }
+  step_clean_backend
+  rm -f "$STATE_FILE"
+  ok "Cleaned"
+}
+
+cmd_reset() {
+  rm -f "$STATE_FILE"
+  warn "Local state cleared. Re-run setup to start over."
+}
+
+cmd_upgrade() {
+  if [[ -n "${1:-}" && "${1:-}" != "--to" ]]; then
+    err "Unknown arg: $1 (use --to <version>)"
+  fi
+  upgrade_to "${2:-}"
+}
+
+cmd_dry_run() {
+  echo "[DRY-RUN] openagents-stack v0.1"
+  echo "  Platform:    $PLATFORM"
+  echo "  Monorepo:    $OPENAGENTS_HOME"
+  echo "  Backend URL: http://localhost:$OPENAGENTS_BACKEND_PORT"
+  echo "  Workspace:   $WORKSPACE_NAME"
+  echo "  Agents:      $AGENT_TYPES"
+  echo ""
+  echo "Steps to run:"
+  echo "  0. Check prereq"
+  echo "  1. Install Docker (if missing)"
+  echo "  2. Install launcher (if missing)"
+  echo "  3. Start backend (clone + compose up + migrations)"
+  echo "  4. Create workspace + agents"
+}
+
+cmd_check() {
+  detect_platform
+  export PLATFORM
+  run_all_checks
+}
+
+print_summary() {
+  local rc_file
+  rc_file=$(detect_shell_rc)
+  cat <<EOF
+
+============================================
+  openagents-stack setup complete!
+  (dependencies installed; backend NOT started)
+
+⚠️  Activate env vars in current shell:
+    source $rc_file
+
+Or open a new terminal.
+
+Next steps (in order):
+  1. source $rc_file
+  2. Start the backend:
+     openagents-stack --start
+  3. Open OpenAgents Launcher (menu bar)
+  4. Launcher → Add Workspace → paste URL:
+     http://localhost:$OPENAGENTS_BACKEND_PORT
+  5. Launcher → Add Agent → choose type (hermes / claude / opencode)
+
+  Or via CLI:
+    export OPENAGENTS_ENDPOINT=http://localhost:$OPENAGENTS_BACKEND_PORT
+    bash examples/create-agents.example.sh
+
+Verify anytime:
+  openagents-stack --check
+  openagents-stack --status
+  openagents-stack --logs        # tail backend logs
+============================================
+EOF
+}
+
+cmd_help() {
+  cat <<EOF
+openagents-stack: one-click local setup for openagents
+
+Usage: openagents-stack [command]
+
+Commands:
+  (default)        Full setup (idempotent)
+  --status         Show backend / agents / upstream version
+  --stop           Stop docker backend
+  --clean          Stop + delete volumes (DATA LOSS)
+  --reset          Clear local state, re-run all steps
+  --upgrade        Show latest upstream + ask to upgrade
+  --upgrade --to   Pin to specific launcher tag
+  --dry-run        Print plan, change nothing
+  --check          Run preflight checks (no changes)
+  --help           This help
+
+Environment:
+  OPENAGENTS_HOME           monorepo dir (default ~/openagents)
+  OPENAGENTS_STACK_HOME     this repo state (default ~/openagents-stack)
+  OPENAGENTS_BACKEND_PORT   backend port (default 8000)
+  WORKSPACE_NAME            workspace name (default wangbo-team)
+  AGENT_TYPES               comma-separated (default hermes,claude,opencode)
+  DOCKER_RUNTIME            macOS: orbstack|docker (default: ask)
+EOF
+}
+
+# ── Entry ──
+case "${1:-}" in
+  "")            cmd_setup ;;
+  --status)      cmd_status ;;
+  --start)       cmd_start ;;
+  --stop)        cmd_stop ;;
+  --restart)     cmd_restart ;;
+  --logs)        cmd_logs ;;
+  --clean)       cmd_clean ;;
+  --reset)       cmd_reset ;;
+  --upgrade)     cmd_upgrade "${@:2}" ;;
+  --dry-run)     cmd_dry_run ;;
+  --check)       cmd_check ;;
+  --help|-h)     cmd_help ;;
+  *)             err "Unknown command: $1 (try --help)" ;;
+esac

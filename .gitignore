@@ -1,0 +1,17 @@
+# OS
+.DS_Store
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Local state
+.deploy-state
+.deploy-backend-state
+.local-setup-state
+.deploy-monorepo-state
+upgrade.lock
+
+# Cache (downloaded .dmg/.deb files)
+cache/

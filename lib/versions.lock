@@ -1,0 +1,14 @@
+# OpenAgents Stack pinned versions
+# Update with: openagents-stack --upgrade
+
+# Launcher (桌面 app + CLI) - from GitHub release
+# Pinned to v0.8.6 — verified working on 2026-06-19
+OPENAGENTS_LAUNCHER_TAG="launcher-v0.8.6"
+
+# Monorepo (workspace/backend) - exact git commit
+# This is the commit that launcher-v0.8.6 was built against
+# Verified on 2026-06-19 with this exact commit
+OPENAGENTS_MONOREPO_COMMIT="45abec5"
+
+# Monorepo branch - for upstream check only (DO NOT auto-upgrade)
+OPENAGENTS_MONOREPO_BRANCH="develop"
