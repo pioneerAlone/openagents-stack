@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # checks.sh - preflight checks (read-only, output only)
 # Source: `source lib/checks.sh`
 # Used by: step_check_prereq in main flow

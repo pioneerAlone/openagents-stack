@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # selfcheck.sh - detect existing components, output report
 # Source: `source lib/selfcheck.sh`
 # Called by: --check command, and at start of each step

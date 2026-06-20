@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # platform/macos/install_docker.sh
 # macOS-specific docker install: OrbStack (default) or Docker Desktop
 

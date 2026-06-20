@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # upgrade.sh - explicit upgrade (user-confirmed, idempotent, lock-protected)
 # Source: `source lib/upgrade.sh`
 

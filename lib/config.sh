@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # config.sh - environment variables and paths
 # Source: `source lib/config.sh`
 

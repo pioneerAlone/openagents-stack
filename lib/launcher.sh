@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # launcher.sh - install openagents launcher (CLI + desktop app)
 # Source: `source lib/launcher.sh`
 

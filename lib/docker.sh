@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # docker.sh - docker detection helpers
 # Source: `source lib/docker.sh`
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # verify.sh - show status, verification helpers
 # Source: `source lib/verify.sh`
 

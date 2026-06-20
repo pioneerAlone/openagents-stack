@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # backend.sh - clone monorepo + start docker backend
 # Source: `source lib/backend.sh`
 

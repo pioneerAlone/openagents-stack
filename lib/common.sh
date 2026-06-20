@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # common.sh - shared functions for all scripts
 # Source: `source lib/common.sh`
 

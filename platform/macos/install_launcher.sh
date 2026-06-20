@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # platform/macos/install_launcher.sh
 # macOS-specific launcher install: discover + download from GitHub releases
 
@@ -39,7 +40,8 @@ except Exception:
   # Download to OPENAGENTS_STACK_HOME/cache/ (user-writable, not /tmp)
   local cache_dir="$OPENAGENTS_STACK_HOME/cache"
   mkdir -p "$cache_dir"
-  local filename="$cache_dir/$(basename "$asset_url")"
+  local filename
+  filename="$cache_dir/$(basename "$asset_url")"
   log "Downloading to $filename"
 
   # Try multiple mirrors in case of network issues
@@ -105,7 +107,7 @@ Possible fixes:
   # Add to PATH if not already (agn is in .app's Resources)
   if ! command -v agn >/dev/null 2>&1; then
     if [[ -f "$HOME/.zshrc" ]] && ! grep -q "openagents/nodejs/node_modules/.bin" "$HOME/.zshrc"; then
-      echo 'export PATH="$HOME/.openagents/nodejs/node_modules/.bin:$PATH"' >> "$HOME/.zshrc"
+      echo "export PATH=\"\$HOME/.openagents/nodejs/node_modules/.bin:\$PATH\"" >> "$HOME/.zshrc"
       log "Added agn to PATH in ~/.zshrc"
     fi
     export PATH="$HOME/.openagents/nodejs/node_modules/.bin:$PATH"

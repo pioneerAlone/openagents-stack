@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # upstream_check.sh - check upstream versions, warn (don't auto-upgrade)
 # Source: `source lib/upstream_check.sh`
 

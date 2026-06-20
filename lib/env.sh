@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # env.sh - manage environment variables in ~/.zshrc (or ~/.bashrc)
 # Source: `source lib/env.sh`
 # Idempotent: safe to re-run; detects existing entries and updates them
