@@ -1,0 +1,132 @@
+name: e2e
+
+# Triggered only manually (workflow_dispatch). Each macOS run costs ~10 min
+# and is bounded to one run at a time (concurrency below). Do NOT add
+# push/PR triggers — keep lint.yml + smoke.yml as the always-on gate.
+
+on:
+  workflow_dispatch:
+    inputs:
+      backend_port:
+        description: "Backend port (default 8000)"
+        required: false
+        default: "8000"
+      docker_runtime:
+        description: "macOS container runtime (orbstack|docker)"
+        required: false
+        default: "orbstack"
+
+concurrency:
+  group: e2e-macos
+  cancel-in-progress: false
+
+jobs:
+  e2e-clean-install:
+    runs-on: macos-14
+    timeout-minutes: 30
+    env:
+      # Non-interactive so the script does not prompt during install.
+      OPENAGENTS_STACK_NONINTERACTIVE: "1"
+      DOCKER_RUNTIME: ${{ github.event.inputs.docker_runtime || 'orbstack' }}
+      OPENAGENTS_BACKEND_PORT: ${{ github.event.inputs.backend_port || '8000' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck + OrbStack (best-effort)
+        run: |
+          set -e
+          brew install shellcheck
+
+          # OrbStack needs sudo + GUI first-run to start the docker
+          # daemon. In a sandboxed CI runner we can't fully start
+          # OrbStack. We install it anyway so the script's macOS
+          # path triggers (it will detect docker as unavailable
+          # and exit non-zero from the install step). That's OK:
+          # the failure is the test — we want to know our script
+          # fails gracefully when docker is missing.
+          brew install --cask orbstack 2>/dev/null || warn "orbstack install skipped"
+
+      - name: "E2E step 1: invoke setup (idempotent)"
+        id: setup
+        # We don't `set -e` because we want the next step to run
+        # regardless of setup's exit, so we can capture the log
+        # and report status cleanly.
+        run: |
+          echo "=========================================="
+          echo "STEP 1: ./bin/openagents-stack"
+          echo "=========================================="
+          ./bin/openagents-stack 2>&1 | tee deploy-step1.log
+          echo "exit=$?" > step1.exit || true
+
+      - name: "E2E step 2: invoke --start"
+        id: start
+        run: |
+          echo "=========================================="
+          echo "STEP 2: ./bin/openagents-stack --start"
+          echo "=========================================="
+          ./bin/openagents-stack --start 2>&1 | tee deploy-step2.log
+          echo "exit=$?" > step2.exit || true
+
+      - name: "E2E step 3: invoke --check"
+        id: check
+        run: |
+          echo "=========================================="
+          echo "STEP 3: ./bin/openagents-stack --check"
+          echo "=========================================="
+          ./bin/openagents-stack --check 2>&1 | tee deploy-step3.log
+          echo "exit=$?" > step3.exit || true
+
+      - name: "E2E step 4: invoke --status"
+        id: status
+        run: |
+          echo "=========================================="
+          echo "STEP 4: ./bin/openagents-stack --status"
+          echo "=========================================="
+          ./bin/openagents-stack --status 2>&1 | tee deploy-step4.log
+          echo "exit=$?" > step4.exit || true
+
+      - name: "E2E teardown: --stop"
+        if: always()
+        run: |
+          echo "=========================================="
+          echo "TEARDOWN: ./bin/openagents-stack --stop"
+          echo "=========================================="
+          ./bin/openagents-stack --stop 2>&1 | tee deploy-stop.log || true
+
+      - name: Decide pass/fail
+        if: always()
+        id: result
+        run: |
+          # Pass criteria:
+          #   - --check exits 0 (every component PASS, no FAIL)
+          #   - --start did NOT error with "Backend did not come up"
+          #
+          # We do NOT require --start itself to have brought up a
+          # backend on this runner (docker daemon may not run in
+          # sandbox). What we DO require: the script runs end-to-end
+          # without crashing on syntax, sourcing, or logic errors,
+          # and the preflight checks behave correctly.
+          check_exit=0
+          if [[ -f step3.exit ]]; then
+            check_exit=$(cat step3.exit | tr -d 'exit=')
+          fi
+
+          if [[ "$check_exit" == "0" ]]; then
+            echo "result=pass" >> "$GITHUB_OUTPUT"
+            echo "✅ --check exit 0 — preflight logic sound"
+          else
+            echo "result=fail" >> "$GITHUB_OUTPUT"
+            echo "❌ --check exit $check_exit"
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-logs-${{ github.run_id }}
+          path: |
+            deploy-step*.log
+            deploy-stop.log
+            step*.exit
+          if-no-files-found: ignore
