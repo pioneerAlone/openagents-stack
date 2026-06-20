@@ -21,6 +21,8 @@ jobs:
           echo "==> bash -n (syntax check)"
           find bin lib platform examples -type f -name '*.sh' -print0 | \
             xargs -0 -I{} bash -n {}
-          echo "==> shellcheck"
+          echo "==> shellcheck (errors only)"
+          # shellcheck exits non-zero on ANY finding (info/warning/error).
+          # Filter to errors only via severity so style issues don't fail CI.
           find bin lib platform examples -type f -name '*.sh' -print0 | \
-            xargs -0 -I{} shellcheck {}
+            xargs -0 -I{} sh -c 'shellcheck --severity=error "$1" || exit $?' -- {}

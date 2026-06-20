@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # platform/linux/install_docker.sh
 # TODO v0.2: implement for Debian/Ubuntu, Fedora/RHEL, Arch
 install_docker_linux() {

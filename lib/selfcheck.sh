@@ -117,7 +117,7 @@ check_backend_health() {
 }
 
 check_port_8000() {
-  if lsof -iTCP:$OPENAGENTS_BACKEND_PORT -sTCP:LISTEN 2>/dev/null | grep -q LISTEN; then
+  if lsof -iTCP:"$OPENAGENTS_BACKEND_PORT" -sTCP:LISTEN 2>/dev/null | grep -q LISTEN; then
     record "INFO|port $OPENAGENTS_BACKEND_PORT|in use (likely our backend)"
   else
     record "INFO|port $OPENAGENTS_BACKEND_PORT|free"
