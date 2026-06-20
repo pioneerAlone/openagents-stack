@@ -28,6 +28,23 @@ Setting up openagents locally means four pieces, and getting them to agree is fi
 
 ## Quick start (macOS)
 
+### One-line install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pioneerAlone/openagents-stack/main/install.sh | bash
+```
+
+This installs the repo to `~/openagents-stack`, symlinks `bin/openagents-stack` into `~/.local/bin`, adds `~/.local/bin` to your `PATH` (in `~/.zshrc`), and runs the dependency installer. After this, **any new terminal** can run:
+
+```bash
+openagents-stack --check
+openagents-stack --start
+openagents-stack --status
+openagents-stack --logs
+```
+
+No `cd`, no `source ~/.zshrc`, no full path.
+
 ### Prerequisites
 
 - macOS (Apple Silicon or Intel)
@@ -35,25 +52,31 @@ Setting up openagents locally means four pieces, and getting them to agree is fi
 - git, curl
 - Either [OrbStack](https://orbstack.dev) **or** Docker Desktop for Mac (OrbStack is recommended; lighter and faster on macOS)
 
-### One-time setup
+### Manual install (alternative to the one-liner)
+
+If you'd rather clone manually:
 
 ```bash
-# Clone this repo
 git clone https://github.com/pioneerAlone/openagents-stack.git ~/openagents-stack
 cd ~/openagents-stack
+./install.sh   # does what the one-liner does, but interactively
+```
 
-# Install dependencies (docker / launcher / clone monorepo / write env to ~/.zshrc)
-./bin/openagents-stack
+Or, if you only want the script in your PATH without running the dependency installer:
 
-# Activate the env vars it just wrote
-source ~/.zshrc
+```bash
+git clone https://github.com/pioneerAlone/openagents-stack.git ~/openagents-stack
+mkdir -p ~/.local/bin
+ln -sf ~/openagents-stack/bin/openagents-stack ~/.local/bin/
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+# new terminals now have `openagents-stack` available
 ```
 
 ### Start the backend
 
 ```bash
 # Bring up db + backend containers, run alembic migrations
-./bin/openagents-stack --start
+openagents-stack --start
 ```
 
 The backend listens on `http://localhost:8000`. The launcher desktop app can now point at it.
@@ -70,9 +93,9 @@ bash examples/create-agents.example.sh
 ### Verify anytime
 
 ```bash
-./bin/openagents-stack --check   # 12 preflight checks
-./bin/openagents-stack --status  # backend / agents / upstream version
-./bin/openagents-stack --logs    # tail backend logs (Ctrl-C to exit)
+openagents-stack --check   # 12 preflight checks
+openagents-stack --status  # backend / agents / upstream version
+openagents-stack --logs    # tail backend logs (Ctrl-C to exit)
 ```
 
 ---

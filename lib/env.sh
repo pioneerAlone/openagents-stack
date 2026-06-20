@@ -2,6 +2,12 @@
 # env.sh - manage environment variables in ~/.zshrc (or ~/.bashrc)
 # Source: `source lib/env.sh`
 # Idempotent: safe to re-run; detects existing entries and updates them
+#
+# NOTE: This file intentionally does NOT write PATH. PATH management is the
+# installer's job (install.sh creates a symlink in ~/.local/bin, then
+# ensures ~/.local/bin is in PATH). This file only handles openagents-stack
+# config variables (OPENAGENTS_HOME, OPENAGENTS_STACK_HOME, etc.) so they
+# are available to scripts and any process that sources the rc file.
 
 # ── Detect shell rc file ──
 detect_shell_rc() {
@@ -65,7 +71,7 @@ mark_env_block() {
   fi
 }
 
-# ── Write all openagents env vars ──
+# ── Write all openagents env vars (no PATH — that's install.sh's job) ────
 write_all_env() {
   local rc_file
   rc_file=$(detect_shell_rc)
@@ -76,7 +82,6 @@ write_all_env() {
   write_env_var "OPENAGENTS_STACK_HOME" "$OPENAGENTS_STACK_HOME" "$rc_file"
   write_env_var "OPENAGENTS_BACKEND_PORT" "$OPENAGENTS_BACKEND_PORT" "$rc_file"
   write_env_var "OPENAGENTS_ENDPOINT" "http://localhost:$OPENAGENTS_BACKEND_PORT" "$rc_file"
-  write_env_var "PATH" "\$HOME/.openagents/nodejs/node_modules/.bin:\$PATH" "$rc_file"
 
   # Mark end
   if ! grep -q "# <<< openagents-stack env <<<" "$rc_file" 2>/dev/null; then
