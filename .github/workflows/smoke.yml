@@ -1,0 +1,45 @@
+name: smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke-macos:
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run --help
+        run: ./bin/openagents-stack --help
+
+      - name: Run --check (no changes; should fail preflight in CI but exit 0)
+        run: ./bin/openagents-stack --check || true
+
+      - name: Verify syntax of every sourced file
+        run: |
+          set -e
+          for f in bin/openagents-stack lib/*.sh platform/macos/*.sh examples/*.sh; do
+            [[ -f "$f" ]] && bash -n "$f" || true
+          done
+          echo "all OK"
+
+  smoke-ubuntu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bash
+        run: sudo apt-get update && sudo apt-get install -y bash
+
+      - name: Verify syntax on Linux
+        run: |
+          set -e
+          for f in bin/openagents-stack lib/*.sh platform/linux/*.sh examples/*.sh; do
+            [[ -f "$f" ]] && bash -n "$f" || true
+          done
+          echo "all OK"

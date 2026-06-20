@@ -1,0 +1,26 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Lint shell scripts
+        run: |
+          set -e
+          echo "==> bash -n (syntax check)"
+          find bin lib platform examples -type f -name '*.sh' -print0 | \
+            xargs -0 -I{} bash -n {}
+          echo "==> shellcheck"
+          find bin lib platform examples -type f -name '*.sh' -print0 | \
+            xargs -0 -I{} shellcheck {}
