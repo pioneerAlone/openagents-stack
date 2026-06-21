@@ -1,0 +1,63 @@
+# ============================================================
+# config.example.yaml — 通用配置模板
+# ============================================================
+# 所有部署模式都从这继承。
+# 不同模式（local-personal / lan-team / enterprise）覆盖需要的字段。
+
+# ── 基础配置（所有模式都需）──
+openagents_stack:
+  backend_port: 8000
+  # bind_address 由各模式决定：
+  #   local-personal: 127.0.0.1（只本机）
+  #   lan-team:       0.0.0.0（局域网）
+  #   enterprise:     127.0.0.1（nginx 反代）
+
+  # workspace_name 由各模式决定
+
+# ── 认证（公共结构，类型由各模式决定）──
+# auth:
+#   type: simple | oauth2 | saml | ldap | none
+#   # simple 模式：
+#   users:
+#     - username: alice
+#       password_hash: "$2b$12$..."
+#   # oauth2 模式：
+#   oauth2:
+#     provider: "https://login.company.com"
+#     client_id: "openagents-stack"
+#     client_secret: "***"
+#     scopes: ["openid", "profile", "email"]
+
+# ── HTTPS（只有 enterprise 需要）──
+# https:
+#   enabled: true
+#   domain: "openagents.company.com"
+#   cert_file: "/etc/ssl/certs/openagents.crt"
+#   key_file: "/etc/ssl/private/openagents.key"
+
+# ── 多租户（只有 enterprise 需要）──
+# tenants:
+#   - name: "engineering"
+#     workspace: eng-shared
+#     members: ["alice@company.com", "bob@company.com"]
+#   - name: "marketing"
+#     workspace: mkt-shared
+#     members: ["charlie@company.com", "diana@company.com"]
+
+# ── 高可用（只有 enterprise 需要）──
+# ha:
+#   enabled: false
+#   replicas: 3
+#   load_balancer: "nginx"
+
+# ── 监控（只有 enterprise 需要）──
+# monitoring:
+#   prometheus: {enabled: false}
+#   grafana: {enabled: false}
+
+# ── 备份（只有 enterprise 需要）──
+# backup:
+#   enabled: false
+#   schedule: "0 2 * * *"
+#   retention_days: 30
+#   storage: "s3://backups/openagents-stack"

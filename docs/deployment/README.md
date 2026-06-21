@@ -1,0 +1,115 @@
+# 部署模式总览
+
+openagents-stack 支持 3 种部署场景，根据你的需求选择：
+
+## 3 种模式对比
+
+| 维度 | local-personal | lan-team | enterprise |
+|------|---------------|----------|------------|
+| **时间** | 5 分钟 | 6 分钟 | 35 分钟 |
+| **目标** | 个人使用 | 小团队 | 企业级 |
+| **网络** | localhost | 局域网 | 公网 + HTTPS |
+| **认证** | 无 | 简单用户名密码 | OAuth2 / SSO / LDAP |
+| **多租户** | 无 | 弱（共享） | 强（独立 workspace） |
+| **HTTPS** | ❌ | ❌ | ✅ |
+| **域名** | ❌ | ❌ | ✅ |
+| **监控** | ❌ | ❌ | ✅ Prometheus + Grafana |
+| **高可用** | ❌ | ❌ | ✅ 多副本 |
+| **备份** | ❌ | ❌ | ✅ S3 |
+| **适用人数** | 1 | 5-20 | 20+ |
+
+## 决策树
+
+```
+你一个人用？
+├─ 是 → local-personal（5 分钟）
+└─ 否
+    │
+    ├─ 团队 5-20 人，内部使用？
+    │   └─ 是 → lan-team（6 分钟）
+    │
+    └─ 公司级，多团队，公网？
+        └─ 是 → enterprise（35 分钟）
+```
+
+## 配置文件对比
+
+| 文件 | 模式 | 关键差异 |
+|------|------|---------|
+| `config.lan.yaml` | B | `bind_address: 0.0.0.0`, simple auth |
+| `config.enterprise.yaml` | C | HTTPS, OAuth2, 多租户, HA |
+
+## 升级
+
+3 种模式都用同一个升级机制：
+```bash
+openagents-stack --upgrade
+```
+
+## 回滚
+
+```bash
+# 1. 回滚 backend
+openagents-stack --restart
+
+# 2. 回滚代码
+git -C ~/openagents-stack reset --hard <previous-commit>
+
+# 3. 回滚 monorepo
+git -C ~/openagents reset --hard <previous-commit>
+```
+
+## 部署拓扑
+
+### local-personal
+```
+┌─────────────┐
+│ Your Mac    │
+│             │
+│  :8000 ←─┐  │
+│           │  │
+│  :8050 ←─┤  │
+│           │  │
+│  :8700 ←─┘  │
+└─────────────┘
+```
+
+### lan-team
+```
+┌─────────────┐       ┌─────────────┐
+│ Server Mac  │       │ Member Mac  │
+│   :8000  ───┼───────│  browser    │
+│   :8666     │       │  openagents │
+└─────────────┘       └─────────────┘
+       ▲
+       │
+┌─────────────┐
+│ Member Mac  │
+│   browser   │
+└─────────────┘
+```
+
+### enterprise
+```
+                ┌─────────────────┐
+   ┌────────┐   │   nginx (HTTPS)  │
+   │ Users  │──→│   :443          │
+   └────────┘   └────────┬────────┘
+                           │
+                ┌──────────┴────────┐
+                │                    │
+         ┌──────▼──────┐     ┌──────▼──────┐
+         │ backend 1   │     │ backend 2   │
+         │   :8000     │     │   :8000     │
+         └──────┬──────┘     └──────┬──────┘
+                │                    │
+         ┌──────▼────────────────────▼──────┐
+         │           PostgreSQL             │
+         └───────────────────────────────────┘
+```
+
+## 下一步
+
+- [local-personal.md](local-personal.md) — 本地模式
+- [lan-team.md](lan-team.md) — 局域网模式
+- [enterprise.md](enterprise.md) — 企业模式
