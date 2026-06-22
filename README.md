@@ -271,7 +271,13 @@ CI workflow:
 
 ## License
 
-MIT (inherited from openagents)
+This project is licensed under the **MIT License** — see [LICENSE](LICENSE).
+
+> The openagents monorepo it wraps (launcher CLI, Docker backend) is
+> licensed under [Apache License 2.0](https://github.com/openagents-org/openagents/blob/develop/LICENSE)
+> and remains governed by its own license. This MIT license applies only
+> to the orchestration code in this repository (bin/, lib/, install.sh,
+> examples/, deployments/, docs/).
 
 ---
 
