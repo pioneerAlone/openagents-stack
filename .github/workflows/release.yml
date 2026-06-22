@@ -30,6 +30,14 @@ jobs:
             git log "$RANGE" --pretty=format:"- %s (%h)" --no-merges
           } > CHANGELOG.tmp
 
+      - name: Bundle examples + deployments as tarballs
+        # Pack the many small example/deployment files into a single
+        # tarball so the GitHub release page isn't flooded with 60+
+        # individual assets. Users `tar xzf` into their install.
+        run: |
+          tar czf examples.tar.gz examples/
+          tar czf deployments.tar.gz deployments/
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -38,8 +46,21 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
           files: |
+            # Entrypoint + user-facing installer
+            install.sh
+            config.example.yaml
+            # Stack core (binary + libs + macOS platform support)
             bin/openagents-stack
             lib/*.sh
+            lib/versions.lock
             platform/macos/*.sh
-            docs/architecture.md
+            # Documentation
             README.md
+            LICENSE
+            docs/architecture.md
+            docs/quickstart.md
+            docs/openagents-overview.md
+            docs/deployment/*.md
+            # Examples + deployments (bundled as tarballs — many small files)
+            examples.tar.gz
+            deployments.tar.gz

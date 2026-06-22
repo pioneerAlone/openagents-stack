@@ -79,8 +79,11 @@ upgrade_to() {
   fi
 
   # ── U2: Backup + atomic write of versions.lock ──
-  log "Backing up versions.lock to versions.lock.bak"
-  cp "$LIB_DIR/versions.lock" "$LIB_DIR/versions.lock.bak"
+  # Use a timestamped backup so repeated --upgrade doesn't accumulate
+  # `versions.lock.bak` files in the repo.
+  local bak="${LIB_DIR}/versions.lock.bak.$(date +%Y%m%dT%H%M%S)"
+  log "Backing up versions.lock to $bak"
+  cp "$LIB_DIR/versions.lock" "$bak"
 
   # ── U4: Resolve the EXACT commit corresponding to the tag (not develop HEAD) ──
   log "Resolving commit for tag $target..."

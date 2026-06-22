@@ -30,7 +30,9 @@ fi
 
 # Test 2: --dry-run 输出
 echo "Test 2: --dry-run output..."
-if $CMD --dry-run 2>&1 | grep -q "DRY-RUN"; then
+# Buffer to a variable first: with `set -o pipefail` + `grep -q`, an
+# early exit from grep can raise SIGPIPE upstream and fail the pipeline.
+if out=$($CMD --dry-run 2>&1); echo "$out" | grep -q "DRY-RUN"; then
   echo "  ✅ PASS"
   PASS=$((PASS+1))
 else
@@ -40,7 +42,7 @@ fi
 
 # Test 3: --version 存在
 echo "Test 3: --version..."
-if $CMD --version 2>&1 | head -1 | grep -q "v"; then
+if $CMD --version 2>/dev/null | head -1 | grep -qE "0\.[0-9]"; then
   echo "  ✅ PASS"
   PASS=$((PASS+1))
 else
@@ -50,7 +52,9 @@ fi
 # Test 4: 12 个核心子命令存在
 echo "Test 4: 12 核心子命令..."
 for cmd in --start --stop --restart --logs --status --upgrade --clean --reset --dry-run --check --help; do
-  if $CMD --help 2>&1 | grep -q "$cmd"; then
+  # `grep -F --` treats the pattern as a literal and stops option parsing
+  # so "--start" isn't mistaken for a grep flag.
+  if $CMD --help 2>&1 | grep -F -q -- "$cmd"; then
     : # 子命令存在
   else
     echo "  ❌ FAIL: $cmd not in help"

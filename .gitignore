@@ -12,6 +12,8 @@
 .local-setup-state
 .deploy-monorepo-state
 upgrade.lock
+versions.lock.bak
+versions.lock.bak.*
 
 # Cache (downloaded .dmg/.deb files)
 cache/

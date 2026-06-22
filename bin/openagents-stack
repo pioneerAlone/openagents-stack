@@ -8,6 +8,10 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Stack version — bump on release. Kept here (not in lib/versions.lock)
+# because versions.lock is for *upstream* (launcher + monorepo) pinning.
+OPENAGENTS_STACK_VERSION="0.1.0"
+
 # ── Source libs FIRST (so log/ok/err/have are available) ──
 # Resolve the real script path even when invoked via a symlink
 # (e.g. ~/.local/bin/openagents-stack -> ~/openagents-stack/bin/openagents-stack).
@@ -105,8 +109,10 @@ cmd_setup() {
   step_check_prereq
   step_install_docker
   step_install_launcher
-  write_all_env          # ← Write env vars to ~/.zshrc
+  write_all_env          # Write env vars to ~/.zshrc
   # step_start_backend REMOVED: user controls start/stop via --start/--stop
+  # We mark setup as complete so cmd_reset / --check know setup ran.
+  done_step step_setup_complete
   print_summary
 }
 
@@ -148,11 +154,19 @@ cmd_clean() {
   read -rp "Continue? (y/n): " ans
   [[ "$ans" == "y" ]] || { log "Aborted"; return 0; }
   step_clean_backend
-  rm -f "$STATE_FILE"
-  ok "Cleaned"
+  # Clean only removes the running backend, not the setup state.
+  # We strip step_start_backend but keep step_setup_complete and the
+  # prereq/install/env steps intact so re-running --start works.
+  if [[ -f "$STATE_FILE" ]]; then
+    grep -v '^step_start_backend$' "$STATE_FILE" > "$STATE_FILE.tmp" \
+      && mv "$STATE_FILE.tmp" "$STATE_FILE" || rm -f "$STATE_FILE.tmp"
+  fi
+  ok "Cleaned (backend data deleted; setup state preserved)"
 }
 
 cmd_reset() {
+  # Reset clears ALL state — re-running `openagents-stack` will
+  # re-run every step including prereq checks.
   rm -f "$STATE_FILE"
   warn "Local state cleared. Re-run setup to start over."
 }
@@ -221,6 +235,17 @@ Verify anytime:
 EOF
 }
 
+cmd_version() {
+  # Source versions.lock for upstream pins (if not already in env).
+  if [[ -f "$LIB_DIR/versions.lock" ]]; then
+    # shellcheck disable=SC1090
+    source "$LIB_DIR/versions.lock"
+  fi
+  echo "openagents-stack $OPENAGENTS_STACK_VERSION"
+  echo "  launcher: ${OPENAGENTS_LAUNCHER_TAG:-unknown}"
+  echo "  monorepo: ${OPENAGENTS_MONOREPO_COMMIT:-unknown} (branch ${OPENAGENTS_MONOREPO_BRANCH:-unknown})"
+}
+
 cmd_help() {
   cat <<EOF
 openagents-stack: one-click local setup for openagents
@@ -240,6 +265,7 @@ Commands:
   --clean          Stop + delete volumes (DATA LOSS)
   --reset          Clear local state, re-run all steps
   --dry-run        Print plan, change nothing
+  --version        Show stack + upstream versions
   --help           This help
 
 Environment:
@@ -265,6 +291,7 @@ case "${1:-}" in
   --upgrade)     cmd_upgrade "${@:2}" ;;
   --dry-run)     cmd_dry_run ;;
   --check)       cmd_check ;;
+  --version|-V)  cmd_version ;;
   --help|-h)     cmd_help ;;
   *)             err "Unknown command: $1 (try --help)" ;;
 esac

@@ -42,23 +42,37 @@ echo "==> Symlinked $BIN_LINK_DIR/$BIN_NAME -> $INSTALL_DIR/bin/$BIN_NAME"
 
 # ── Step 3: Add ~/.local/bin to PATH (idempotent, marked block) ──────────────
 # Use a unique marker so we never collide with user-managed PATH entries.
-mkdir -p "$(dirname "$SHELL_RC")"
-touch "$SHELL_RC"
+# We write the block to BOTH ~/.zshrc (interactive zsh, default on macOS) and
+# ~/.bashrc + ~/.bash_profile (for users running bash interactively or in
+# scripts that source bash_profile). Each file gets its own marked block so
+# removing openagents-stack cleanly later is straightforward.
+add_path_block() {
+  local rc_file="$1"
+  mkdir -p "$(dirname "$rc_file")"
+  touch "$rc_file"
 
-PATH_MARKER="# >>> openagents-stack PATH >>>"
-PATH_MARKER_END="# <<< openagents-stack PATH <<<"
+  local marker="# >>> openagents-stack PATH >>>"
+  local marker_end="# <<< openagents-stack PATH <<<"
 
-if ! grep -qF "$PATH_MARKER" "$SHELL_RC"; then
-  {
-    echo ''
-    echo "$PATH_MARKER"
-    echo 'export PATH="$HOME/.local/bin:$PATH"'
-    echo "$PATH_MARKER_END"
-  } >> "$SHELL_RC"
-  echo "==> Added ~/.local/bin to PATH in $SHELL_RC"
-else
-  echo "==> ~/.local/bin already in PATH (marker found)"
-fi
+  if ! grep -qF "$marker" "$rc_file"; then
+    {
+      echo ''
+      echo "$marker"
+      echo 'export PATH="$HOME/.local/bin:$PATH"'
+      echo "$marker_end"
+    } >> "$rc_file"
+    echo "==> Added ~/.local/bin to PATH in $rc_file"
+  else
+    echo "==> ~/.local/bin already in PATH in $rc_file (marker found)"
+  fi
+}
+
+# zsh (interactive default on macOS since Catalina)
+add_path_block "$HOME/.zshrc"
+# bash — write to both .bashrc (interactive non-login) and .bash_profile
+# (login shells on macOS skip .bashrc unless configured otherwise).
+add_path_block "$HOME/.bashrc"
+add_path_block "$HOME/.bash_profile"
 
 # ── Step 4: Invoke the actual setup (install deps, clone monorepo, etc.) ──
 echo ""

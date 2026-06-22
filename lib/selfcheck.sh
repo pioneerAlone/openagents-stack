@@ -56,6 +56,22 @@ check_launcher_cli() {
     local ver
     ver=$(agn --version 2>/dev/null | head -1)
     record "PASS|launcher cli|$ver"
+
+    # A1: Compare the actually installed version against the pinned
+    # tag in versions.lock. The pinned tag (e.g. launcher-v0.8.6) and
+    # the actual CLI version (e.g. v0.2.143) are produced by different
+    # teams and have drifted historically — a mismatch is a strong
+    # signal that the running setup was built against a different
+    # upstream than this stack expects.
+    if [[ -n "${OPENAGENTS_LAUNCHER_TAG:-}" ]]; then
+      local actual pinned
+      actual=$(echo "$ver" | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -1 | sed 's/^v//')
+      pinned="${OPENAGENTS_LAUNCHER_TAG#launcher-}"
+      pinned="${pinned#v}"
+      if [[ -n "$actual" && -n "$pinned" && "$actual" != "$pinned" ]]; then
+        record "WARN|launcher cli|installed v$actual != pinned v$pinned (run --upgrade or check versions.lock)"
+      fi
+    fi
   else
     record "FAIL|launcher cli|agn not in PATH"
   fi
@@ -126,10 +142,14 @@ check_port_8000() {
 
 check_workspace() {
   if command -v agn >/dev/null 2>&1; then
-    if agn workspace list 2>/dev/null | grep -q "$WORKSPACE_NAME"; then
-      record "PASS|workspace|$WORKSPACE_NAME exists"
+    # launcher v0.2+ uses hash slugs (e.g. e26b9e15), not human-readable names.
+    # Count data rows: skip the 2-line table header (NAME/TYPE/... + separator).
+    local count
+    count=$(agn workspace list 2>/dev/null | awk 'NR>2 && NF>=2 {n++} END {print n+0}')
+    if [[ "$count" -gt 0 ]]; then
+      record "PASS|workspace|$count found"
     else
-      record "WARN|workspace|$WORKSPACE_NAME not found"
+      record "WARN|workspace|none found"
     fi
   else
     record "SKIP|workspace|agn not available"
@@ -138,8 +158,10 @@ check_workspace() {
 
 check_agents() {
   if command -v agn >/dev/null 2>&1; then
+    # Same approach: count data rows. launcher agent names vary widely
+    # (claude-1, hermes-worker, my-foo, ...), so we don't regex on names.
     local count
-    count=$(agn list 2>/dev/null | grep -cE "^\s*my-" || true)
+    count=$(agn list 2>/dev/null | awk 'NR>2 && NF>=2 {n++} END {print n+0}')
     if [[ "$count" -gt 0 ]]; then
       record "PASS|agents|$count configured"
     else
