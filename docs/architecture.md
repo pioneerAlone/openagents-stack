@@ -101,8 +101,8 @@ We **do not** follow `develop`. Instead we pin to a specific commit + tag combin
 
 ```bash
 # lib/versions.lock
-OPENAGENTS_LAUNCHER_TAG="launcher-v0.8.6"
-OPENAGENTS_MONOREPO_COMMIT="45abec5"
+OPENAGENTS_LAUNCHER_VERSION="0.2.143"   # npm: @openagents-org/agent-launcher
+OPENAGENTS_MONOREPO_COMMIT="45abec5"    # git: openagents monorepo
 ```
 
 Upgrade is **explicit** (user runs `--upgrade`).

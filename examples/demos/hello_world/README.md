@@ -10,6 +10,17 @@
 - docker 可用
 - Python 环境可用
 
+> **本 Demo 跑在 Network 层 (port 8700)**,不是 Workspace backend (port 8000)。
+> 它用 Python SDK 直接启动一个 network 进程,不通过 Docker。
+> 详见 [docs/layers.md](../../../docs/layers.md)。
+>
+> `run.sh` 第 0 步会**自动** `pip install -e $OPENAGENTS_HOME` 把 monorepo
+> 装到当前 Python 环境(只装一次,后续 `pip` 跳过)。如果你想自己装:
+>
+> ```bash
+> pip install -e ~/openagents
+> ```
+
 ## 5 步跑起 Hello World
 
 ### 1. 启动 openagents-stack backend

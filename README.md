@@ -304,6 +304,7 @@ This project is licensed under the **MIT License** — see [LICENSE](LICENSE).
 
 - [docs/quickstart.md](docs/quickstart.md) — 5 分钟入门
 - [docs/architecture.md](docs/architecture.md) — 架构详解
+- [docs/layers.md](docs/layers.md) — **Workspace vs Network vs SDK** (read this if you're confused which port / which process is which)
 - [docs/deployment/](docs/deployment/) — 3 种部署模式
 - [examples/demos/](examples/demos/) — 6 个 Demo
 - [examples/mods/](examples/mods/) — 15 个 Mod 配置
