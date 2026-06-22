@@ -59,22 +59,22 @@ upgrade_to() {
   echo "============================================"
   echo "  openagents-stack upgrade"
   echo "============================================"
-  echo "  Pinned launcher: $OPENAGENTS_LAUNCHER_TAG"
+  echo "  Pinned launcher: v$OPENAGENTS_LAUNCHER_VERSION"
   echo "  Pinned commit:   $OPENAGENTS_MONOREPO_COMMIT"
-  echo "  Upstream latest: $(get_latest_launcher_tag)"
+  echo "  Upstream latest: v$(get_latest_launcher_version)"
   echo ""
 
   if [[ -z "$target" ]]; then
-    target=$(get_latest_launcher_tag)
+    target=$(get_latest_launcher_version)
     if [[ -z "$target" ]]; then
-      err "Could not fetch latest version. Use --to <tag> explicitly."
+      err "Could not fetch latest version. Use --to <version> explicitly."
     fi
-    read -rp "Upgrade to $target? (y/n): " ans
+    read -rp "Upgrade to v$target? (y/n): " ans
     [[ "$ans" == "y" ]] || { log "Cancelled"; return 0; }
   fi
 
-  if [[ "$target" == "$OPENAGENTS_LAUNCHER_TAG" ]]; then
-    ok "Already at $target. Nothing to do."
+  if [[ "$target" == "$OPENAGENTS_LAUNCHER_VERSION" ]]; then
+    ok "Already at v$target. Nothing to do."
     return 0
   fi
 
@@ -100,12 +100,12 @@ upgrade_to() {
 # OpenAgents Stack pinned versions
 # Updated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-OPENAGENTS_LAUNCHER_TAG="$target"
+OPENAGENTS_LAUNCHER_VERSION="$target"
 OPENAGENTS_MONOREPO_COMMIT="$new_commit"
 OPENAGENTS_MONOREPO_BRANCH="$OPENAGENTS_MONOREPO_BRANCH"
 EOF
   mv "$tmp_lock" "$LIB_DIR/versions.lock"
-  ok "Pinned to: launcher=$target, commit=$new_commit"
+  ok "Pinned to: launcher=v$target, commit=$new_commit"
 
   # Re-clone monorepo with new commit
   if [[ -d "$OPENAGENTS_HOME/.git" ]]; then
@@ -113,16 +113,24 @@ EOF
     rm -rf "$OPENAGENTS_HOME"
   fi
 
-  git clone --branch "$OPENAGENTS_MONOREPO_BRANCH" --depth 1000 \
+  # Match git_clone_monorepo: metadata-only + sparse, then fetch the
+  # pinned commit on top. Keeps upgrade as cheap as first install.
+  git clone --filter=blob:none --sparse --depth 1 \
     https://github.com/openagents-org/openagents.git "$OPENAGENTS_HOME"
   cd "$OPENAGENTS_HOME"
+  git sparse-checkout set "${MONOREPO_SPARSE_PATHS[@]}"
+  git fetch --depth 1000 origin "$new_commit" 2>/dev/null \
+    || warn "Could not fetch $new_commit, using branch HEAD"
   git checkout "$new_commit" 2>/dev/null || warn "Could not checkout $new_commit, using branch HEAD"
+  # Pin a local branch name so subsequent `git status` etc. don't sit
+  # in detached HEAD. Branch name = OPENAGENTS_MONOREPO_BRANCH.
+  git checkout -B "$OPENAGENTS_MONOREPO_BRANCH" "$new_commit" 2>/dev/null || true
 
   # Restart backend
   log "Restarting backend..."
   cd "$OPENAGENTS_HOME/workspace"
-  docker compose -p openagents down 2>/dev/null || true
-  docker compose -p openagents up -d db backend
+  docker compose -p "${COMPOSE_PROJECT}" down 2>/dev/null || true
+  docker compose -p "${COMPOSE_PROJECT}" up -d db backend
 
   # Wait for health
   for i in {1..30}; do
@@ -130,7 +138,7 @@ EOF
     # so upgrade doesn't drift from the project's known-good endpoints.
     if probe_backend_health; then
       ok "Backend healthy after upgrade (via ${BACKEND_HEALTH_MATCHED})"
-      docker compose -p openagents exec -T backend alembic upgrade head
+      docker compose -p "${COMPOSE_PROJECT}" exec -T backend alembic upgrade head
       return 0
     fi
     sleep 2

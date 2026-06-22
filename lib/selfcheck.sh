@@ -58,16 +58,13 @@ check_launcher_cli() {
     record "PASS|launcher cli|$ver"
 
     # A1: Compare the actually installed version against the pinned
-    # tag in versions.lock. The pinned tag (e.g. launcher-v0.8.6) and
-    # the actual CLI version (e.g. v0.2.143) are produced by different
-    # teams and have drifted historically — a mismatch is a strong
-    # signal that the running setup was built against a different
-    # upstream than this stack expects.
-    if [[ -n "${OPENAGENTS_LAUNCHER_TAG:-}" ]]; then
+    # version in versions.lock. The pin is the npm version of
+    # @openagents-org/agent-launcher; what agn reports is whatever the
+    # npm-installed binary prints. These should agree.
+    if [[ -n "${OPENAGENTS_LAUNCHER_VERSION:-}" ]]; then
       local actual pinned
       actual=$(echo "$ver" | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -1 | sed 's/^v//')
-      pinned="${OPENAGENTS_LAUNCHER_TAG#launcher-}"
-      pinned="${pinned#v}"
+      pinned="${OPENAGENTS_LAUNCHER_VERSION#v}"
       if [[ -n "$actual" && -n "$pinned" && "$actual" != "$pinned" ]]; then
         record "WARN|launcher cli|installed v$actual != pinned v$pinned (run --upgrade or check versions.lock)"
       fi
@@ -188,7 +185,7 @@ run_all_checks() {
   echo "│  openagents-stack preflight                                  │"
   echo "│  Platform: $PLATFORM"
   echo "│  Monorepo: $OPENAGENTS_HOME"
-  echo "│  Pinned:   launcher=$OPENAGENTS_LAUNCHER_TAG commit=${OPENAGENTS_MONOREPO_COMMIT:0:7}"
+  echo "│  Pinned:   launcher=v$OPENAGENTS_LAUNCHER_VERSION commit=${OPENAGENTS_MONOREPO_COMMIT:0:7}"
   echo "├──────────────────────────────────────────────────────────────┤"
   for r in "${CHECK_RESULTS[@]}"; do
     IFS='|' read -r status name msg <<< "$r"

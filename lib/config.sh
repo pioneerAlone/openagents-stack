@@ -27,7 +27,7 @@ load_versions() {
   fi
   # shellcheck disable=SC1090
   source "$LIB_DIR/versions.lock"
-  export OPENAGENTS_LAUNCHER_TAG
+  export OPENAGENTS_LAUNCHER_VERSION
   export OPENAGENTS_MONOREPO_COMMIT
   export OPENAGENTS_MONOREPO_BRANCH
 }

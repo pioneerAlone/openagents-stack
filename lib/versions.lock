@@ -1,14 +1,22 @@
 # OpenAgents Stack pinned versions
 # Update with: openagents-stack --upgrade
 
-# Launcher (桌面 app + CLI) - from GitHub release
-# Pinned to v0.8.6 — verified working on 2026-06-19
-OPENAGENTS_LAUNCHER_TAG="launcher-v0.8.6"
+# Launcher (agn CLI + menu-bar app) — installed via npm as
+# @openagents-org/agent-launcher. Pinned to the npm version we tested
+# against. Use `npm view @openagents-org/agent-launcher versions` to
+# list available releases; the launcher team publishes both git tags
+# on the openagents monorepo AND npm releases, and the two have
+# drifted historically (e.g. v0.8.6 monorepo tag ↔ v0.2.143 npm).
+#
+# Pinned 0.2.143 — verified working on 2026-06-19.
+OPENAGENTS_LAUNCHER_VERSION="0.2.143"
 
-# Monorepo (workspace/backend) - exact git commit
-# This is the commit that launcher-v0.8.6 was built against
-# Verified on 2026-06-19 with this exact commit
+# Monorepo (workspace/backend) — exact git commit, used by sparse-checkout
+# in lib/backend.sh::git_clone_monorepo.
+# Verified on 2026-06-19 with this exact commit.
 OPENAGENTS_MONOREPO_COMMIT="45abec5"
 
-# Monorepo branch - for upstream check only (DO NOT auto-upgrade)
+# Monorepo branch — for upstream check only (DO NOT auto-upgrade).
+# We use this to give `git status` a branch name after the sparse
+# clone, so the user isn't stuck in detached HEAD.
 OPENAGENTS_MONOREPO_BRANCH="develop"

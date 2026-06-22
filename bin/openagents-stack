@@ -146,7 +146,7 @@ cmd_logs() {
   fi
   log "Tailing backend logs (Ctrl-C to exit)..."
   cd "$OPENAGENTS_HOME/workspace"
-  docker compose -p openagents logs -f --tail 50 backend
+  docker compose -p "${COMPOSE_PROJECT}" logs -f --tail 50 backend
 }
 
 cmd_clean() {
@@ -242,7 +242,7 @@ cmd_version() {
     source "$LIB_DIR/versions.lock"
   fi
   echo "openagents-stack $OPENAGENTS_STACK_VERSION"
-  echo "  launcher: ${OPENAGENTS_LAUNCHER_TAG:-unknown}"
+  echo "  launcher: v${OPENAGENTS_LAUNCHER_VERSION:-unknown}"
   echo "  monorepo: ${OPENAGENTS_MONOREPO_COMMIT:-unknown} (branch ${OPENAGENTS_MONOREPO_BRANCH:-unknown})"
 }
 

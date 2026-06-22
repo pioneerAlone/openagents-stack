@@ -30,8 +30,8 @@ step_install_launcher() {
   else
     # ── Step 2: Both installed → check version ──
     local current_version
-    current_version=$(agn --version 2>/dev/null | head -1 | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-    local pinned_version="${OPENAGENTS_LAUNCHER_TAG#launcher-}"  # strip "launcher-" prefix
+    current_version=$(agn --version 2>/dev/null | head -1 | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -1 | sed 's/^v//')
+    local pinned_version="${OPENAGENTS_LAUNCHER_VERSION#v}"  # strip optional "v" prefix
 
     if [[ -z "$current_version" ]]; then
       warn "Could not detect installed version. Proceeding with reinstall to be safe."

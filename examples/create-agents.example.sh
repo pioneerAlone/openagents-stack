@@ -51,7 +51,7 @@ fi
 slug=$("$AGN" workspace list 2>/dev/null | tail -1 | awk '{print $1}')
 [[ -z "$slug" ]] && err "Could not resolve workspace slug"
 
-token=$(docker exec workspace-db-1 psql -U postgres -d openagents_workspace -tA \
+token=$(docker exec openagents-db-1 psql -U postgres -d openagents_workspace -tA \
   -c "SELECT password_hash FROM workspaces WHERE slug='$slug';" 2>/dev/null | tr -d ' ')
 [[ -z "$token" ]] && err "Could not fetch workspace token from DB"
 ok "Workspace slug: $slug"
