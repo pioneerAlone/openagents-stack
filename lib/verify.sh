@@ -3,19 +3,10 @@
 # Source: `source lib/verify.sh`
 
 show_status() {
-  # Backend health (probe multiple endpoints because upstream changed health paths)
-  # /v1/events is what launcher actually probes and gets 200 when healthy
-  local backend_ok=false
-  local matched_path=""
-  for path in "/health" "/api/health" "/api/v1/health" "/healthz" "/v1/events" "/api/v1/events"; do
-    if curl -sf --max-time 3 "http://localhost:${OPENAGENTS_BACKEND_PORT}${path}" >/dev/null 2>&1; then
-      backend_ok=true
-      matched_path="$path"
-      break
-    fi
-  done
-  if $backend_ok; then
-    ok "Backend:    healthy on :$OPENAGENTS_BACKEND_PORT (via $matched_path)"
+  # Backend health (probe + endpoint list come from lib/backend.sh, shared
+  # with --check and --upgrade so all three stay in sync)
+  if probe_backend_health; then
+    ok "Backend:    healthy on :$OPENAGENTS_BACKEND_PORT (via ${BACKEND_HEALTH_MATCHED})"
   else
     warn "Backend:   not responding on :$OPENAGENTS_BACKEND_PORT"
   fi
@@ -37,13 +28,14 @@ show_status() {
   # Launcher
   if command -v agn >/dev/null 2>&1; then
     log "Launcher:   $(agn --version 2>/dev/null | head -1)"
+    # Same row-count strategy as lib/selfcheck.sh check_agents: launcher
+    # v0.2+ uses arbitrary agent names (claude-1, hermes-worker, ...),
+    # so a name regex would silently misreport. awk counts data rows
+    # after the 2-line table header.
     local agents
-    agents=$(agn list 2>/dev/null | grep -E "^\s*my-" || true)
-    if [[ -n "$agents" ]]; then
-      log "Agents:"
-      echo "$agents" | while read -r line; do
-        log "  $line"
-      done
+    agents=$(agn list 2>/dev/null | awk 'NR>2 && NF>=2 {n++} END {print n+0}')
+    if [[ "${agents:-0}" -gt 0 ]]; then
+      log "Agents:     $agents configured"
     fi
   else
     warn "Launcher not installed"

@@ -10,14 +10,35 @@ get_backend_container() {
   docker ps -a --filter "label=com.docker.compose.project=openagents" --filter "label=com.docker.compose.service=backend" --format "{{.Names}}" 2>/dev/null | head -1
 }
 
-# Probe backend health across known endpoint shapes
-# Returns 0 if any endpoint responds 2xx/3xx, 1 otherwise
+# ── Backend health probing ──
+# Upstream's health endpoint has changed shape across releases
+# (/health → /api/health → /api/v1/health → /healthz), and /v1/events
+# is what the openagents launcher actually probes and gets 200 from when
+# the backend is healthy. Try each path in order; first match wins.
+#
+# If you ever add a new endpoint, append to this array only — probe_backend_health
+# and check_backend_health both consume it, so the change picks up everywhere.
+BACKEND_HEALTH_ENDPOINTS=(
+  "/health"
+  "/api/health"
+  "/api/v1/health"
+  "/healthz"
+  "/v1/events"
+  "/api/v1/events"
+)
+
+# Probe backend health across known endpoint shapes.
+# Returns 0 if any endpoint responds 2xx/3xx, 1 otherwise.
+# On success, sets BACKEND_HEALTH_MATCHED to the path that worked (callers
+# that want to show "healthy via /v1/events" use this).
 probe_backend_health() {
-  for path in "/health" "/api/health" "/api/v1/health" "/healthz" "/v1/events" "/api/v1/events"; do
+  for path in "${BACKEND_HEALTH_ENDPOINTS[@]}"; do
     if curl -sf --max-time 3 "http://localhost:${OPENAGENTS_BACKEND_PORT}${path}" >/dev/null 2>&1; then
+      BACKEND_HEALTH_MATCHED="$path"
       return 0
     fi
   done
+  BACKEND_HEALTH_MATCHED=""
   return 1
 }
 

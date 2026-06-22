@@ -126,8 +126,10 @@ EOF
 
   # Wait for health
   for i in {1..30}; do
-    if curl -sf "http://localhost:$OPENAGENTS_BACKEND_PORT/api/health" >/dev/null 2>&1; then
-      ok "Backend healthy after upgrade"
+    # Use the same probe helper lib/backend.sh exposes to --check,
+    # so upgrade doesn't drift from the project's known-good endpoints.
+    if probe_backend_health; then
+      ok "Backend healthy after upgrade (via ${BACKEND_HEALTH_MATCHED})"
       docker compose -p openagents exec -T backend alembic upgrade head
       return 0
     fi

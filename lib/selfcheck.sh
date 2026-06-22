@@ -120,16 +120,13 @@ check_db_container() {
 }
 
 check_backend_health() {
-  # Probe multiple endpoints because upstream has changed health paths
-  # across releases (/api/health, /api/v1/health, /healthz, /health)
-  # /v1/events is what launcher actually probes and gets 200 when healthy
-  for path in "/api/health" "/api/v1/health" "/healthz" "/health" "/v1/events" "/api/v1/events"; do
-    if curl -sf --max-time 3 "http://localhost:${OPENAGENTS_BACKEND_PORT}${path}" >/dev/null 2>&1; then
-      record "PASS|backend health|200 OK (${path})"
-      return
-    fi
-  done
-  record "FAIL|backend health|not responding on :$OPENAGENTS_BACKEND_PORT (tried: /api/health, /api/v1/health, /healthz, /health, /v1/events, /api/v1/events)"
+  # BACKEND_HEALTH_ENDPOINTS + probe_backend_health come from lib/backend.sh
+  # (sourced before this file). Don't duplicate the endpoint list here.
+  if probe_backend_health; then
+    record "PASS|backend health|200 OK (${BACKEND_HEALTH_MATCHED})"
+  else
+    record "FAIL|backend health|not responding on :$OPENAGENTS_BACKEND_PORT (tried: ${BACKEND_HEALTH_ENDPOINTS[*]})"
+  fi
 }
 
 check_port_8000() {
