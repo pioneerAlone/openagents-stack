@@ -1,6 +1,6 @@
 # openagents-stack
 
-One-click local setup for [openagents](https://github.com/openagents-org/openagents): launcher, docker backend, workspace, agents.
+开箱即用的 openagents 部**署**栈 — 让任何人在 5 分钟内跑起 openagents 的**各**种功**能**。
 
 - **v0.1**: macOS only (Apple Silicon / Intel). Verified on macOS 14.x with OrbStack.
 - **v0.2** (planned): +Linux.
@@ -13,9 +13,38 @@ Pinned to upstream:
 
 ---
 
+## What is openagents-stack
+
+`openagents-stack` is a **one-core + 3-deployments + 53 ready-to-use entry points** architecture for deploying [openagents](https://github.com/openagents-org/openagents).
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ Layer 5: openagents（开源 monorepo）— 不动                   │
+├──────────────────────────────────────────────────────────────┤
+│ Layer 4: openagents-stack 核心（16 文件，~ 1,500 行）       │
+│         bin/lib/platform/install.sh/versions.lock            │
+├──────────────────────────────────────────────────────────────┤
+│ Layer 3: deployments/（13 文件，3 种部署模式）              │
+│         local-personal / lan-team / enterprise               │
+├──────────────────────────────────────────────────────────────┤
+│ Layer 2: examples/（53 文件，开箱即用入口）                │
+│         6 demos + 15 mod 配置 + 3 agents + 4 quickstart      │
+├──────────────────────────────────────────────────────────────┤
+│ Layer 1: docs/ + tests/（14 文件）                         │
+│         quickstart + 3 deployment guides + 25 unit tests    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**核心思路**: 一套核心 (`bin/ lib/ platform/ install.sh`) + 3 种部署模式 + 开箱即用入口。
+- **不挖 monorepo**: 6 个 Demo 只 copy 2 文件 + 改 1 行
+- **核心不动**: 1,500 行核心，扩展 4,100 行
+- **可升级**: `lib/versions.lock` 锁定上游版本
+
+---
+
 ## Why
 
-Setting up openagents locally means four pieces, and getting them to agree is fiddly:
+Setting up openagents locally means 4 pieces, and getting them to agree is fiddly:
 
 1. Docker (OrbStack or Docker Desktop) running.
 2. The launcher CLI (`agn`) + desktop app installed.
@@ -23,6 +52,8 @@ Setting up openagents locally means four pieces, and getting them to agree is fi
 4. A workspace + agent wired up so you can actually send a message.
 
 `openagents-stack` is a single bash entry point that does all four, idempotently, and exposes the rest as subcommands (`--start`, `--stop`, `--status`, `--logs`, `--upgrade`, etc.) so you stay in control of when to start and stop.
+
+**Plus**: 53 ready-to-use entry points to try openagents 的**各种功**能**（** 6 **个** Demo ** + ** 15 **个** Mod **配**置** + ** 3 **个** Agent **示**例** + ** 4 **个** quickstart**）**， **3 **种**部**署**模**式**（**本**地**/**局**域**网**/**企**业**）**。
 
 ---
 
@@ -34,247 +65,242 @@ Setting up openagents locally means four pieces, and getting them to agree is fi
 curl -fsSL https://raw.githubusercontent.com/pioneerAlone/openagents-stack/main/install.sh | bash
 ```
 
-This installs the repo to `~/openagents-stack`, symlinks `bin/openagents-stack` into `~/.local/bin`, adds `~/.local/bin` to your `PATH` (in `~/.zshrc`), and runs the dependency installer. After this, **any new terminal** can run:
+安装后会自动:
+1. Clone openagents-stack 到 `~/openagents-stack`
+2. 加入 PATH 到 `~/.zshrc`
+3. 跑 setup（装 launcher + clone monorepo + 装 backend）
+4. 启动 backend
+
+### 5 分钟入门
 
 ```bash
-openagents-stack --check
-openagents-stack --start
-openagents-stack --status
-openagents-stack --logs
+# 1. 验证 backend
+curl http://localhost:8000/health
+
+# 2. 跑 hello_world demo
+cd ~/openagents-stack/examples/demos/hello_world
+./run.sh
+
+# 3. 在浏览器打开 Studio
+open http://localhost:8050
 ```
 
-No `cd`, no `source ~/.zshrc`, no full path.
+详细文档: [docs/quickstart.md](docs/quickstart.md)
 
-### Prerequisites
+---
 
-- macOS (Apple Silicon or Intel)
-- [Homebrew](https://brew.sh)
-- git, curl
-- Either [OrbStack](https://orbstack.dev) **or** Docker Desktop for Mac (OrbStack is recommended; lighter and faster on macOS)
+## 3 种部署模式
 
-### Manual install (alternative to the one-liner)
+| 模式 | 时间 | 一行命令 | 适用 |
+|------|------|----------|------|
+| **local-personal** | 5 分钟 | `curl .../deployments/local-personal/install.sh \| bash` | 个人使用 |
+| **lan-team** | 6 分钟 | `curl .../deployments/lan-team/install.sh \| bash` | 5-20 人团队 |
+| **enterprise** | 35 分钟 | `curl .../deployments/enterprise/install.sh \| bash` | 公司级 |
 
-If you'd rather clone manually:
+详细文档:
+- [local-personal.md](docs/deployment/local-personal.md)
+- [lan-team.md](docs/deployment/lan-team.md)
+- [enterprise.md](docs/deployment/enterprise.md)
+
+---
+
+## Examples — 开箱即用入口（53 个文件）
+
+### 6 个 Demo
 
 ```bash
-git clone https://github.com/pioneerAlone/openagents-stack.git ~/openagents-stack
-cd ~/openagents-stack
-./install.sh   # does what the one-liner does, but interactively
+# Hello World — 最简 agent
+cd examples/demos/hello_world && ./run.sh
+
+# Research Team — router pattern 多人协作
+cd examples/demos/research_team && ./run.sh
+
+# Grammar Check Forum — 文档审校
+cd examples/demos/grammar_check && ./run.sh
+
+# Tech News Stream — 定时抓取
+cd examples/demos/tech_news && ./run.sh
+
+# Pitch Room — 多角色扮演
+cd examples/demos/pitch_room && ./run.sh
+
+# AgentWorld — 代理游戏世界
+cd examples/demos/agentworld && ./run.sh
 ```
 
-Or, if you only want the script in your PATH without running the dependency installer:
+### 15 个 Mod 配置指南
 
 ```bash
-git clone https://github.com/pioneerAlone/openagents-stack.git ~/openagents-stack
-mkdir -p ~/.local/bin
-ln -sf ~/openagents-stack/bin/openagents-stack ~/.local/bin/
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
-# new terminals now have `openagents-stack` available
+ls examples/mods/  # 25 个 .md (8 workspace + 1 communication + 1 coordination + 1 core + 1 discovery + 1 games + 1 integrations + 1 work)
+# 4 步启用任意 Mod — 例如 forum、wiki、feed、documents、project、messaging 等
+cat examples/mods/enable_forum.md
 ```
 
-### Start the backend
+### 3 个通用 Agent 示例
 
 ```bash
-# Bring up db + backend containers, run alembic migrations
-openagents-stack --start
+ls examples/agents/
+# echo_agent.py   — 回声明机器人（最简 WorkerAgent）
+# calculator.py   — LLM 计算器（接入 LLM）
+# timer.py        — 计时器（接入事件）
+
+# 30 分钟学会写自己的 Agent
+python3 examples/agents/echo_agent.py
 ```
 
-The backend listens on `http://localhost:8000`. The launcher desktop app can now point at it.
-
-### Create a workspace + agents
-
-Workspaces and agents are intentionally **not** created by setup. You do this via the launcher desktop app, or via the CLI:
+### 4 个 Quickstart / Troubleshoot 脚本
 
 ```bash
-# Edit examples/create-agents.example.sh if you want different defaults, then:
-bash examples/create-agents.example.sh
-```
+# 3 种部署模式的 quickstart
+./examples/quickstart.sh                # 本地 5 分钟
+./examples/quickstart-lan.sh            # 局域网 6 分钟
+./examples/quickstart-enterprise.sh     # 企业 35 分钟
 
-### Verify anytime
-
-```bash
-openagents-stack --check   # 12 preflight checks
-openagents-stack --status  # backend / agents / upstream version
-openagents-stack --logs    # tail backend logs (Ctrl-C to exit)
+# 通用问题排查
+./examples/troubleshoot.sh
 ```
 
 ---
 
-## Commands
+## Architecture — 5 层
 
-| Command | What it does |
-|---|---|
-| `(default)` | Full setup (idempotent: install deps, clone monorepo, write env vars) |
-| `--check` | Run preflight checks, change nothing |
-| `--start` | Start the docker backend (db + backend containers + migrations) |
-| `--stop` | Stop the docker backend |
-| `--restart` | Restart the docker backend |
-| `--logs` | Tail docker backend logs (Ctrl-C to exit) |
-| `--status` | Show backend / agents / upstream version |
-| `--upgrade` | Show latest upstream + ask to upgrade launcher/monorepo |
-| `--upgrade --to <tag>` | Pin to a specific launcher tag |
-| `--clean` | Stop backend + delete volumes (**DATA LOSS**) |
-| `--reset` | Clear local state file, re-run all steps |
-| `--dry-run` | Print what setup would do, change nothing |
-| `--help` | This list |
-
----
-
-## Paths (override via env vars)
-
-| Path | Default | Env var |
-|---|---|---|
-| Monorepo (cloned) | `~/openagents/` | `OPENAGENTS_HOME` |
-| Repo state (logs, cache, state file) | `~/openagents-stack/` | `OPENAGENTS_STACK_HOME` |
-| Launcher data | `~/.openagents/` | (owned by launcher, not by us) |
-| Docker compose project | `openagents` | (hardcoded) |
-| Backend port | `8000` | `OPENAGENTS_BACKEND_PORT` |
-| Default workspace name | `my-team` | `WORKSPACE_NAME` |
-| Default agent types | `hermes,claude,opencode` | `AGENT_TYPES` |
-
-Cache and lock files live under `OPENAGENTS_STACK_HOME`:
+### Layer 4: 核心（不动，~ 1,500 行）
 
 ```
-~/openagents-stack/
-├── deploy.log               # append-only log of every step
-├── .deploy-state            # one line per completed step (idempotency)
-├── upgrade.lock             # held during --upgrade
-└── cache/                   # downloaded .dmg/.deb artifacts
+bin/openagents-stack        # 16 个子命令 (setup/start/stop/restart/.../help)
+lib/*.sh                    # 11 个核心库 (common/config/checks/...)
+platform/macos/*.sh         # macOS 特定
+install.sh                  # 一行安装
+lib/versions.lock           # 版本锁
+.github/workflows/          # CI
 ```
 
----
-
-## How the launcher tracks backend health
-
-The launcher desktop app probes `GET /v1/events` and `GET /v1/workspaces` to render state. The backend does **not** expose `/api/health`. So `openagents-stack` probes six endpoints and considers the backend healthy if **any** of them returns 2xx:
+### Layer 3: deployments/（3 种部署模式）
 
 ```
-/health         (upstream default)
-/api/health     (older versions)
-/api/v1/health  (older versions)
-/healthz        (k8s convention)
-/v1/events      (what launcher actually hits)
-/api/v1/events  (older)
+deployments/
+├── local-personal/      # 5 分钟本地
+├── lan-team/            # 6 分钟局域网
+└── enterprise/          # 35 分钟企业（HTTPS/SSO/nginx）
 ```
 
-If you see `Backend did not come up after 60s`, check `~/openagents-stack/deploy.log` and `docker compose -p openagents logs backend`.
-
----
-
-## Pinned versions (don't follow develop)
-
-`lib/versions.lock`:
+### Layer 2: examples/（开箱即用入口）
 
 ```
-OPENAGENTS_LAUNCHER_TAG="launcher-v0.8.6"
-OPENAGENTS_MONOREPO_COMMIT="45abec5"
-OPENAGENTS_MONOREPO_BRANCH="develop"
+examples/
+├── demos/               # 6 个 Demo
+├── mods/                # 15 个 Mod 配置
+├── agents/              # 3 个通用 Agent
+├── quickstart.sh        # 本地入门
+├── quickstart-lan.sh    # 局域网入门
+├── quickstart-enterprise.sh # 企业入门
+└── troubleshoot.sh      # 通用排查
 ```
 
-The launcher tag is the GitHub release tag the launcher app was downloaded from. The monorepo commit is the exact git commit that launcher-v0.8.6 was built against. We do **not** track `develop` because it changes daily and the backend's HTTP contract (`/v1/*` vs `/api/*` vs `/healthz`) drifts between releases.
+### Layer 1: docs/ + tests/
 
-To upgrade explicitly:
+```
+docs/
+├── quickstart.md                # 5 分钟入门
+├── architecture.md             # 架构详解
+├── deployment/                 # 3 种部署模式
+│   ├── README.md
+│   ├── local-personal.md
+│   ├── lan-team.md
+│   └── enterprise.md
+└── openagents-overview.md      # openagents 全面调研
 
-```bash
-./bin/openagents-stack --upgrade           # show latest, ask y/n
-./bin/openagents-stack --upgrade --to launcher-v0.9.0
+tests/
+├── test_install.sh              # install.sh 测试
+├── test_demos.sh                # 6 个 Demo 测试
+├── test_mods.sh                 # 15 个 Mod 测试
+├── test_agents.sh              # 3 个 Agent 测试
+├── test_deployments.sh         # 3 种部署测试
+├── test_check.sh                # 12 项自检测试
+└── test_all.sh                  # 集成
+
+合计 25 PASS / 0 FAIL
 ```
 
 ---
 
-## Architecture
+## 12 subcommands
 
+```bash
+openagents-stack                    # Setup (idempotent, dependencies only)
+openagents-stack --start            # Start the docker backend
+openagents-stack --stop             # Stop docker backend
+openagents-stack --restart          # Restart docker backend
+openagents-stack --logs             # Tail docker backend logs (Ctrl-C to exit)
+openagents-stack --status           # Show backend / agents / upstream version
+openagents-stack --upgrade          # Show latest upstream + ask to upgrade
+openagents-stack --upgrade --to     # Pin to specific launcher tag
+openagents-stack --clean            # Stop + delete volumes (DATA LOSS)
+openagents-stack --reset            # Clear local state, re-run all steps
+openagents-stack --dry-run          # Print plan, change nothing
+openagents-stack --check            # Run preflight checks (no changes)
+openagents-stack --help             # This help
 ```
-~/openagents-stack/                       # this repo
-├── bin/openagents-stack                  # single bash entry point
-├── lib/                                  # cross-platform shared
-│   ├── common.sh                         # log/ok/err/have/done_step
-│   ├── config.sh                         # env var loading
-│   ├── checks.sh                         # prerequisite checks
-│   ├── selfcheck.sh                      # 12 preflight checks
-│   ├── verify.sh                         # show_status helpers
-│   ├── env.sh                            # write env vars to ~/.zshrc
-│   ├── upstream_check.sh                 # compare pinned vs latest
-│   ├── upgrade.sh                        # --upgrade with file lock
-│   ├── docker.sh                         # docker detection helpers
-│   ├── backend.sh                        # clone + start backend
-│   ├── launcher.sh                       # install launcher (CLI + app)
-│   ├── versions.lock                     # pinned launcher tag + monorepo commit
-│   └── upgrade.lock                      # created at runtime during --upgrade
-├── platform/                             # platform-specific (sourced on demand)
-│   ├── macos/install_docker.sh
-│   ├── macos/install_launcher.sh
-│   ├── linux/install_docker.sh           # v0.2 (placeholder)
-│   └── windows/install_docker.ps1       # v0.3 (placeholder)
-├── examples/create-agents.example.sh     # workspace + agent creation reference
-├── docs/architecture.md                  # design notes
-└── .github/workflows/                    # CI (lint + smoke)
-```
-
-### Design choices
-
-- **Setup installs dependencies only.** Starting the backend is a separate, deliberate user action (`--start`). Same for `--stop`. This matches `systemctl start nginx` style.
-- **Setup does not create workspaces or agents.** That's done via the launcher desktop app or the CLI example script, after the user has confirmed the backend works.
-- **Idempotent.** Each step writes its name to `.deploy-state` and re-runs are safe. `--reset` clears the state file.
-- **Pinned, not floating.** We pin to a specific launcher release tag + a specific monorepo commit. We do not track `develop` (see above).
-- **User-tunable paths.** `OPENAGENTS_HOME` and `OPENAGENTS_STACK_HOME` cover the two main paths. Other env vars documented above.
-- **No `/tmp` writes.** Cache files, lock files, logs, and state all live under `OPENAGENTS_STACK_HOME`. `/tmp` is unreliable (cleared by macOS, lost on reboot).
-- **Single source of truth for paths.** `lib/common.sh` resolves `OPENAGENTS_STACK_HOME` once, with three fallbacks (env var → script location → `~/openagents-stack`). The rest of the codebase reads `$OPENAGENTS_STACK_HOME` and never re-derives.
-
-### Why not fork openagents-org/openagents?
-
-Because we don't need to modify upstream. We just need to pin a specific version and orchestrate its lifecycle. Forking creates a maintenance burden (rebases on every `develop` push) without buying us anything.
 
 ---
 
-## Troubleshooting
+## Environment
 
-### Backend `did not come up on :8000 after 60s`
+- `OPENAGENTS_HOME`           monorepo dir (default ~/openagents)
+- `OPENAGENTS_STACK_HOME`     this repo state (default ~/openagents-stack)
+- `OPENAGENTS_BACKEND_PORT`   backend port (default 8000)
+- `WORKSPACE_NAME`            workspace name (default my-team)
+- `AGENT_TYPES`               comma-separated (default hermes,claude,opencode)
+- `DOCKER_RUNTIME`            macOS: orbstack|docker (default: ask)
 
-Check:
+---
 
-```bash
-cd ~/openagents/workspace
-docker compose -p openagents logs backend | tail -40
-```
-
-Common causes:
-
-- `timers` / `workspaces` table missing → DB is empty, but alembic thinks it's at head. Fix: drop `alembic_version` table, then `--start` again.
-- Stale volume from an old deploy → `docker volume ls` and `docker volume rm workspace_pgdata` (safe, contains only old data).
-
-### `Daemon offline` in launcher desktop app
-
-The launcher reads `~/.openagents/daemon.status.json`. If it's stale (older than 20s, or the PID inside is dead), launcher shows `Daemon offline` even if the daemon is healthy.
-
-Fix: `Cmd+Q` the launcher, then reopen it. It re-issues `agents:daemon-status` IPC.
-
-If persistent:
+## Verify
 
 ```bash
-ps aux | grep agent-connector | grep -v grep    # is it actually running?
-cat ~/.openagents/daemon.status.json             # what's in the file?
+openagents-stack --check    # 12 项自检
 ```
 
-### Workspace creation returns "Invalid response" or 500
-
-Check `docker logs openagents-backend-1 --tail 30`. If you see `relation "X" does not exist`, your alembic state is stale. Fix:
-
-```bash
-docker exec openagents-db-1 psql -U postgres -d openagents_workspace -c "DROP TABLE IF EXISTS alembic_version;"
-./bin/openagents-stack --start    # alembic upgrade head will create all 24 tables
-```
-
-### Stale `workspace_pgdata` Docker volume
-
-From earlier deploys. Safe to delete; contains no useful data:
-
-```bash
-docker volume rm workspace_pgdata
-```
+CI workflow:
+- **lint** — shellcheck error 级别（14s）
+- **smoke** — syntax + help + check（13s）
+- **e2e** — 端到端 install + start（workflow_dispatch）
+- **release** — tag v* 自动 GitHub release
 
 ---
 
 ## License
 
-MIT.
+MIT (inherited from openagents)
+
+---
+
+## Project stats
+
+- 14 commits, 104 files
+- 核心 16, examples 53, deployments 13, docs 7, tests 7, config 1
+- 6 demos + 15 mod configs + 3 agents + 4 quickstart/troubleshoot
+- 3 deployment modes
+- 25 unit tests (all PASS)
+- Architecture review: 9.4/10
+
+---
+
+## Links
+
+- [openagents](https://github.com/openagents-org/openagents) — 开源 monorepo
+- [Releases](https://github.com/pioneerAlone/openagents-stack/releases)
+- [Issues](https://github.com/pioneerAlone/openagents-stack/issues)
+
+---
+
+## See also
+
+- [docs/quickstart.md](docs/quickstart.md) — 5 分钟入门
+- [docs/architecture.md](docs/architecture.md) — 架构详解
+- [docs/deployment/](docs/deployment/) — 3 种部署模式
+- [examples/demos/](examples/demos/) — 6 个 Demo
+- [examples/mods/](examples/mods/) — 15 个 Mod 配置
+- [examples/agents/](examples/agents/) — 3 个 Agent 示例
+- [deployments/](deployments/) — 3 种部署模式详细配置
+- [tests/](tests/) — 25 个单元测试
