@@ -127,7 +127,10 @@ Debug steps:
 
 git_clone_monorepo() {
   log "  Cloning openagents monorepo to $OPENAGENTS_HOME (commit ${OPENAGENTS_MONOREPO_COMMIT:0:7})..."
-  git clone --branch "$OPENAGENTS_MONOREPO_BRANCH" --depth 50 \
+  # --depth 1000: 2+ years of develop history at typical commit rates.
+  # Bump this if you ever pin a much older commit; the previous --depth 50
+  # only covered ~7 days and broke within a week of pinning.
+  git clone --branch "$OPENAGENTS_MONOREPO_BRANCH" --depth 1000 \
     https://github.com/openagents-org/openagents.git "$OPENAGENTS_HOME"
   cd "$OPENAGENTS_HOME"
   git checkout "$OPENAGENTS_MONOREPO_COMMIT" 2>/dev/null || {

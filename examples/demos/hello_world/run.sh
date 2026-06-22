@@ -5,7 +5,24 @@
 # ============================================================
 set -euo pipefail
 
-OPENAGENTS_STACK_HOME="${OPENAGENTS_STACK_HOME:-$HOME/proj/openagents-stack}"
+OPENAGENTS_STACK_HOME="${OPENAGENTS_STACK_HOME:-}"
+# Three-layer fallback (mirrors lib/common.sh's OPENAGENTS_STACK_HOME probe):
+#   1. explicit env var (lets advanced users override)
+#   2. follow the openagents-stack binary in $PATH (handles the ~/.local/bin
+#      symlink created by install.sh on any prefix the user installed to)
+#   3. assume the install.sh default at $HOME/openagents-stack
+if [[ -z "$OPENAGENTS_STACK_HOME" ]]; then
+  if command -v openagents-stack >/dev/null 2>&1; then
+    _bin="$(command -v openagents-stack)"
+    # The installer creates a symlink at $PREFIX/bin/openagents-stack that
+    # points at $STACK_HOME/bin/openagents-stack. Resolve the symlink to
+    # find STACK_HOME.
+    [[ -L "$_bin" ]] && _bin="$(readlink "$_bin")"
+    OPENAGENTS_STACK_HOME="$(cd "$(dirname "$_bin")/.." && pwd)"
+  else
+    OPENAGENTS_STACK_HOME="$HOME/openagents-stack"
+  fi
+fi
 OPENAGENTS_MONOREPO="${OPENAGENTS_HOME:-$HOME/openagents}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

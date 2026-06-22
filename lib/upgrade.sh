@@ -113,7 +113,7 @@ EOF
     rm -rf "$OPENAGENTS_HOME"
   fi
 
-  git clone --branch "$OPENAGENTS_MONOREPO_BRANCH" --depth 50 \
+  git clone --branch "$OPENAGENTS_MONOREPO_BRANCH" --depth 1000 \
     https://github.com/openagents-org/openagents.git "$OPENAGENTS_HOME"
   cd "$OPENAGENTS_HOME"
   git checkout "$new_commit" 2>/dev/null || warn "Could not checkout $new_commit, using branch HEAD"
