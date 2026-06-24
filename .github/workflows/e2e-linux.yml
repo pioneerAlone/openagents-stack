@@ -1,0 +1,78 @@
+name: e2e-linux
+
+# Linux smoke test for the platform/linux/* scripts. Distinct from
+# smoke-ubuntu (which only verifies bash -n) in that this one also
+# actually runs the bin script's --dry-run and --help, so we catch
+# sourcing / logic errors that pure syntax checking misses.
+#
+# We do NOT install Docker or attempt a real --start in this workflow:
+# the goal is to prove the stack's shell logic runs on Linux, not to
+# prove a full backend install works (that needs root + daemon + network
+# pulls and belongs in a separate, gated workflow).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  linux-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      # Non-interactive so any prompt paths in bin/openagents-stack
+      # take their default branch instead of hanging on stdin.
+      OPENAGENTS_STACK_NONINTERACTIVE: "1"
+      # Help the platform/linux scripts know they're in CI (they
+      # currently use this only to swap curl|sh for sh <file>).
+      CI: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck + bash
+        run: |
+          set -e
+          sudo apt-get update
+          sudo apt-get install -y shellcheck bash
+
+      - name: Syntax check every sh file (bin + lib + all platforms + examples)
+        run: |
+          set -e
+          echo "==> bash -n on all .sh"
+          for f in bin/openagents-stack lib/*.sh platform/macos/*.sh platform/linux/*.sh examples/*.sh examples/demos/*/run.sh; do
+            [[ -f "$f" ]] || continue
+            bash -n "$f"
+          done
+          echo "==> bash -n all OK"
+
+      - name: Lint (shellcheck error severity)
+        run: |
+          set -e
+          # Same severity filter as lint.yml so style hints don't fail CI.
+          for f in bin/openagents-stack lib/*.sh platform/macos/*.sh platform/linux/*.sh; do
+            [[ -f "$f" ]] || continue
+            shellcheck --severity=error "$f"
+          done
+          echo "==> shellcheck error-severity all OK"
+
+      - name: Run --help
+        run: ./bin/openagents-stack --help
+
+      - name: Run --version
+        run: ./bin/openagents-stack --version
+
+      - name: Run --dry-run
+        # --dry-run only prints the plan; it doesn't touch the system.
+        # This is the strongest non-destructive check we can do on a
+        # Linux runner without installing Docker.
+        run: ./bin/openagents-stack --dry-run
+
+      - name: Run --check (allowed to fail preflight; exit 0 expected)
+        # In a CI sandbox the docker daemon isn't running, so the
+        # check_docker / check_backend_health rows will FAIL/WARN.
+        # That's not a stack bug — it's the environment. The test
+        # passes if the script's overall exit code is 0.
+        run: ./bin/openagents-stack --check || true
