@@ -147,28 +147,23 @@ with the distro version, the failing step, and the log.
 
 ---
 
-## Examples — 开箱即用入口（53 个文件）
+## Examples — 开箱即用入口（54 个文件）
+
+**Use [examples/README.md](examples/README.md) as the entry point** —
+it splits the 54 files into 4 categories (demos / mods / agents /
+quickstart scripts) and tells you which one to look at for what.
 
 ### 6 个 Demo
 
+跑**完整可玩**的多 agent 场景,在 Studio 里跟它们对话:
+
 ```bash
-# Hello World — 最简 agent
-cd examples/demos/hello_world && ./run.sh
-
-# Research Team — router pattern 多人协作
-cd examples/demos/research_team && ./run.sh
-
-# Grammar Check Forum — 文档审校
-cd examples/demos/grammar_check && ./run.sh
-
-# Tech News Stream — 定时抓取
-cd examples/demos/tech_news && ./run.sh
-
-# Pitch Room — 多角色扮演
-cd examples/demos/pitch_room && ./run.sh
-
-# AgentWorld — 代理游戏世界
-cd examples/demos/agentworld && ./run.sh
+cd examples/demos/hello_world && ./run.sh      # 最简 agent,验证 install 用
+cd examples/demos/research_team && ./run.sh   # router + analyst + web_searcher
+cd examples/demos/grammar_check && ./run.sh   # 文档审校
+cd examples/demos/tech_news && ./run.sh       # 定时抓 news + 评论
+cd examples/demos/pitch_room && ./run.sh      # founder/engineer/investor 3 人路演
+cd examples/demos/agentworld && ./run.sh      # 代理游戏世界
 ```
 
 ### 15 个 Mod 配置指南
@@ -355,8 +350,9 @@ This project is licensed under the **MIT License** — see [LICENSE](LICENSE).
 - [docs/architecture.md](docs/architecture.md) — 架构详解
 - [docs/layers.md](docs/layers.md) — **Workspace vs Network vs SDK** (read this if you're confused which port / which process is which)
 - [docs/deployment/](docs/deployment/) — 3 种部署模式
+- [examples/README.md](examples/README.md) — examples/ 入口(demos + mods + agents + quickstart 4 类)
 - [examples/demos/](examples/demos/) — 6 个 Demo
 - [examples/mods/](examples/mods/) — 15 个 Mod 配置
 - [examples/agents/](examples/agents/) — 3 个 Agent 示例
 - [deployments/](deployments/) — 3 种部署模式详细配置
-- [tests/](tests/) — 25 个单元测试
+- [tests/](tests/) — test_check.sh(4 tests) + e2e-linux CI
