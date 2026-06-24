@@ -146,3 +146,57 @@ openagents-stack --upgrade
 ```
 
 详见 `openagents-stack --help`。
+
+---
+
+## Testing safely — 跑 demo 会不会跟现有 backend 冲突?
+
+**简短回答:不会冲突,但会**:
+- 装一次 openagents SDK 到你的 Python 环境(`pip install -e ~/openagents`)
+- 在 8700/8050 起 Network + Studio 进程(只要端口没被别的程序占)
+- 复用你现有的 Workspace backend(`openagents-stack --start` 检测到已起会 skip)
+
+### 跑 demo 前 30 秒检查
+
+```bash
+# 1. 确认 backend 还在(应该看到 oa-stack-backend-1 / oa-stack-db-1)
+docker ps --filter "label=com.docker.compose.project=oa-stack"
+
+# 2. 确认 8700 / 8050 没被占
+lsof -iTCP:8700 -sTCP:LISTEN
+lsof -iTCP:8050 -sTCP:LISTEN
+
+# 3. 记一下现有 workspace + agent(跑完会多个,不是覆盖)
+openagents-stack --workspaces
+agn list
+```
+
+### 跑 demo 期间(跟现有 backend 隔离的部分)
+
+| 进程 | 端口 | 影响 |
+|------|------|------|
+| `openagents-stack --start` | 8000 | **不会起新容器** — 检测到已起就 skip,显示 "Backend already running" |
+| `python3 -m openagents network start` | 8700 | **新增** Python 进程;**不**碰 docker |
+| `python3 -m openagents agent start` | — | **新增** Python 进程,后台跑 |
+| `python3 -m openagents studio -s` | 8050 | **新增** Python 进程 |
+
+### 跑完清理(demo 末尾 Ctrl-C 之后)
+
+```bash
+# 停 Network + Studio + 后台 agent
+pkill -f "openagents network start"
+pkill -f "openagents studio"
+pkill -f "openagents agent start"
+
+# 验证你的 backend 没被影响
+openagents-stack --check   # 应该 10/10 PASS,容器应该还跑着
+```
+
+### 已知的小副作用(不算 bug,只是事实)
+
+- **Workspace 名**:demo 跑会**在 db 里新增**一个 workspace(不是覆盖你现有的)
+- **Agent 名**:demo 跑会**新增** agent;Launcher 看到同名不会冲突,只是列表变长
+- **Python 环境**:`pip install -e` 装到当前 shell 的 Python(virtualenv 或系统),要管理好
+
+> 真要**完全干净**测试,在另一台机器、另一台用户、或另一个 Python
+> venv 里跑。日常 demo 跑一下不会破坏现有 backend。
