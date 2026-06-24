@@ -123,6 +123,13 @@ cmd_status() {
   show_status
 }
 
+cmd_workspaces() {
+  # Surfaces the data you need to connect the Launcher or agn CLI to
+  # an existing workspace: slug, name, endpoint, token, plus the
+  # exact agn/launcher commands to run. See lib/backend.sh.
+  list_workspaces
+}
+
 cmd_start() {
   step_start_backend
   ok "Backend started. To view logs: openagents-stack --logs"
@@ -259,6 +266,7 @@ Commands:
   --restart        Restart docker backend
   --logs           Tail docker backend logs (Ctrl-C to exit)
   --status         Show backend / agents / upstream version
+  --workspaces     Show workspaces + tokens (paste-into-launcher info)
   --upgrade        Show latest upstream + ask to upgrade
   --upgrade --to   Pin to specific launcher tag
   --clean          Stop + delete volumes (DATA LOSS)
@@ -281,6 +289,7 @@ EOF
 case "${1:-}" in
   "")            cmd_setup ;;
   --status)      cmd_status ;;
+  --workspaces)   cmd_workspaces ;;
   --start)       cmd_start ;;
   --stop)        cmd_stop ;;
   --restart)     cmd_restart ;;

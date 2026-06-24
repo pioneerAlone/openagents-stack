@@ -51,7 +51,7 @@ fi
 
 # Test 4: 12 个核心子命令存在
 echo "Test 4: 12 核心子命令..."
-for cmd in --start --stop --restart --logs --status --upgrade --clean --reset --dry-run --check --help; do
+for cmd in --start --stop --restart --logs --status --workspaces --upgrade --clean --reset --dry-run --check --help; do
   # `grep -F --` treats the pattern as a literal and stops option parsing
   # so "--start" isn't mistaken for a grep flag.
   if $CMD --help 2>&1 | grep -F -q -- "$cmd"; then

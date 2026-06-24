@@ -233,3 +233,85 @@ step_clean_backend() {
   fi
   ok "Backend cleaned (volumes deleted)"
 }
+
+# ── List workspaces from backend (slug + name + token + connection info) ──
+# Calls the backend's GET /v1/workspaces (auth-free) to get the list, then
+# queries the Postgres container directly to fetch the password_hash /
+# "token" for each one — the backend API deliberately doesn't return
+# the token in list responses, only after a POST create. This command
+# is what the user runs to get the connection info they need to paste
+# into the Launcher.
+list_workspaces() {
+  # Backend must be up
+  if ! probe_backend_health; then
+    err "Backend is not running on :$OPENAGENTS_BACKEND_PORT. Run: openagents-stack --start"
+  fi
+
+  # 1. Fetch the workspace list (no auth required)
+  local list_json
+  list_json=$(curl -sf "http://localhost:${OPENAGENTS_BACKEND_PORT}/v1/workspaces" 2>/dev/null) \
+    || err "GET /v1/workspaces failed (backend up but API call rejected)"
+
+  # Parse out: slug, name, workspaceId for each. We use python3 for
+  # reliable JSON parsing (avoid regex bugs that bit us in C1).
+  local parsed
+  parsed=$(echo "$list_json" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for w in d.get('data', []):
+    print(f\"{w.get('slug','')}\t{w.get('name','')}\t{w.get('workspaceId','')}\")
+" 2>/dev/null)
+
+  if [[ -z "$parsed" ]]; then
+    warn "No workspaces found on backend (response: $(echo "$list_json" | head -c 200))"
+    return 0
+  fi
+
+  # 2. Find the running db container + query tokens
+  local db_container
+  db_container=$(get_db_container)
+  if [[ -z "$db_container" ]]; then
+    err "Could not find the db container (label=${COMPOSE_PROJECT}, service=db) — is the backend running?"
+  fi
+
+  # Pull all (slug, token) pairs in one SQL call
+  local token_rows
+  token_rows=$(docker exec "$db_container" psql -U postgres -d openagents_workspace -tA \
+    -c "SELECT slug || E'\t' || password_hash FROM workspaces WHERE status != 'deleted' AND password_hash IS NOT NULL;" \
+    2>/dev/null) || err "psql into $db_container failed — is the db running?"
+
+  # 3. Merge and print
+  local endpoint="http://localhost:${OPENAGENTS_BACKEND_PORT}"
+  echo ""
+  echo "Workspaces registered with the backend ($(echo "$parsed" | wc -l | tr -d ' ') found):"
+  echo ""
+
+  while IFS=$'\t' read -r slug name wsid; do
+    [[ -z "$slug" ]] && continue
+    local token
+    token=$(echo "$token_rows" | awk -F'\t' -v s="$slug" '$1==s {print $2}')
+    if [[ -z "$token" ]]; then
+      warn "$slug: token not found in db (workspace may be in a partial state)"
+      continue
+    fi
+    cat <<EOF
+  ┌─ workspace ──────────────────────────────────────────
+  │  slug:     $slug
+  │  name:     $name
+  │  id:       $wsid
+  │  endpoint: $endpoint
+  │  token:    $token
+  │
+  │  → Quick-connect URL (paste into Launcher's "快速连接" dialog):
+  │      ${endpoint}/${slug}?token=${token}
+  │
+  │  → agn CLI (paste the export, then run connect):
+  │      export OPENAGENTS_ENDPOINT=$endpoint
+  │      agn workspace connect "$slug" "$token"
+  └─────────────────────────────────────────────────────
+EOF
+  done <<< "$parsed"
+
+  echo ""
+  log "Tip: --status also shows workspace count; this command gives you the token + connect command."
+}
