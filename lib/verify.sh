@@ -11,17 +11,19 @@ show_status() {
     warn "Backend:   not responding on :$OPENAGENTS_BACKEND_PORT"
   fi
 
-  # Docker containers
+  # Docker containers — filter by the project label so we only show
+  # our own stack's containers (was 'name=openagents' which silently
+  # missed them once we renamed the compose project to oa-stack).
   if docker_available; then
     local containers
-    containers=$(docker ps --filter "name=openagents" --format "{{.Names}}\t{{.Status}}" 2>/dev/null)
+    containers=$(docker ps --filter "label=com.docker.compose.project=${COMPOSE_PROJECT}" --format "{{.Names}}\t{{.Status}}" 2>/dev/null)
     if [[ -n "$containers" ]]; then
       log "Containers:"
       echo "$containers" | while IFS=$'\t' read -r name status; do
         log "  $name: $status"
       done
     else
-      warn "No openagents containers running"
+      warn "No ${COMPOSE_PROJECT} containers running"
     fi
   fi
 

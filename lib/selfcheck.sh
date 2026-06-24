@@ -101,7 +101,10 @@ check_monorepo() {
 }
 
 check_backend_container() {
-  if docker ps --filter "name=openagents-backend" --format "{{.Names}}" 2>/dev/null | grep -q openagents-backend; then
+  # COMPOSE_PROJECT (default "oa-stack") is sourced from lib/backend.sh
+  # and exported. Filter on the project label so this works even if the
+  # user happens to have unrelated containers with similar names.
+  if docker ps --filter "label=com.docker.compose.project=${COMPOSE_PROJECT}" --filter "label=com.docker.compose.service=backend" --format "{{.Names}}" 2>/dev/null | grep -q .; then
     record "PASS|backend container|running"
   else
     record "FAIL|backend container|not running"
@@ -109,7 +112,7 @@ check_backend_container() {
 }
 
 check_db_container() {
-  if docker ps --filter "name=openagents-db" --format "{{.Names}}" 2>/dev/null | grep -q openagents-db; then
+  if docker ps --filter "label=com.docker.compose.project=${COMPOSE_PROJECT}" --filter "label=com.docker.compose.service=db" --format "{{.Names}}" 2>/dev/null | grep -q .; then
     record "PASS|db container|running"
   else
     record "FAIL|db container|not running"
