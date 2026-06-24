@@ -1,15 +1,17 @@
 # openagents-stack
 
-开箱即用的 openagents 部**署**栈 — 让任何人在 5 分钟内跑起 openagents 的**各**种功**能**。
+开箱即用的 openagents 部**署**栈 — 让任何人在 5 分钟内跑起 openagents 的**各种功**能**。
 
-- **v0.1**: macOS only (Apple Silicon / Intel). Verified on macOS 14.x with OrbStack.
-- **v0.2** (planned): +Linux.
+- **v0.1 (current)**: macOS (Apple Silicon / Intel). Verified on macOS 14.x with OrbStack.
+- **v0.2 (preview)**: +Linux (Debian / Ubuntu). Platform scripts + CI shipped;
+  install path tested in a sandbox; full e2e on a real Linux machine is
+  pending — see the [Linux platform](#linux-platform-preview) section below.
 - **v0.3** (planned): +Windows.
 
 Pinned to upstream:
 
-- launcher `v0.8.6` (verified working 2026-06-19)
-- monorepo commit `45abec5` (the commit `launcher-v0.8.6` was built against; we do **not** track `develop`)
+- launcher npm `v0.2.143` — installed via `npm install -g @openagents-org/agent-launcher`
+- monorepo commit `45abec5` (the commit launcher v0.2.143 was built against; we do **not** track `develop`)
 
 ---
 
@@ -57,7 +59,11 @@ Setting up openagents locally means 4 pieces, and getting them to agree is fiddl
 
 ---
 
-## Quick start (macOS)
+## Quick start
+
+The one-line install works on macOS (full) and Linux (preview). On
+macOS the OrbStack or Docker Desktop runtime is required; on Linux
+any modern Docker CE will do.
 
 ### One-line install
 
@@ -65,11 +71,11 @@ Setting up openagents locally means 4 pieces, and getting them to agree is fiddl
 curl -fsSL https://raw.githubusercontent.com/pioneerAlone/openagents-stack/main/install.sh | bash
 ```
 
-安装后会自动:
-1. Clone openagents-stack 到 `~/openagents-stack`
-2. 加入 PATH 到 `~/.zshrc`
-3. 跑 setup（装 launcher + clone monorepo + 装 backend）
-4. 启动 backend
+The installer clones the repo to `~/openagents-stack`, adds it to your
+PATH (writes `~/.zshrc`, `~/.bashrc`, and `~/.bash_profile`), runs
+setup (installs Docker + launcher, clones the monorepo, writes env
+vars to your shell rc), and exits. You then run `openagents-stack
+--start` to bring the backend up.
 
 ### 5 分钟入门
 
@@ -97,10 +103,47 @@ open http://localhost:8050
 | **lan-team** | 6 分钟 | `curl .../deployments/lan-team/install.sh \| bash` | 5-20 人团队 |
 | **enterprise** | 35 分钟 | `curl .../deployments/enterprise/install.sh \| bash` | 公司级 |
 
+> The three deployment scripts are thin wrappers around the root
+> `install.sh` — see [deployments/README.md](deployments/README.md).
+
 详细文档:
 - [local-personal.md](docs/deployment/local-personal.md)
 - [lan-team.md](docs/deployment/lan-team.md)
 - [enterprise.md](docs/deployment/enterprise.md)
+
+---
+
+## Linux platform (preview)
+
+v0.2 ships real install scripts for Linux but is still a preview —
+the CI proves the scripts source and parse, not that a real Linux
+machine can go end-to-end. Distro support:
+
+| Distro | Docker | Launcher | Notes |
+|--------|--------|----------|-------|
+| Debian / Ubuntu     | ✅ via `get.docker.com` | ✅ via `npm install -g` | tested path |
+| Fedora / RHEL / CentOS | ❌ TODO v0.2 | ✅ via `npm install -g` | install path exists, just the docker installer is a `TODO` |
+| Arch / Manjaro      | ❌ TODO v0.2 | ✅ via `pacman -Sy nodejs npm` | same |
+
+What's covered today:
+- `platform/linux/install_docker.sh` — detects distro, installs Docker CE
+- `platform/linux/install_launcher.sh` — installs Node.js if missing, then `npm install -g @openagents-org/agent-launcher@$OPENAGENTS_LAUNCHER_VERSION`
+- `e2e-linux.yml` GitHub Actions workflow — ubuntu-latest runner, runs
+  `bash -n` on every `.sh` plus `./bin/openagents-stack --help`,
+  `--version`, `--dry-run`, and a tolerated `--check`
+
+What's NOT covered yet:
+- The OpenAgents Launcher.app menu bar application (macOS-only `.app`
+  bundle; on Linux you only get the `agn` CLI)
+- A full `--start` on a real Linux box (the workflow deliberately
+  tolerates the "no docker daemon in CI sandbox" preflight row rather
+  than try to start one)
+- Fedora / RHEL / Arch Docker install (the scripts bail with a clear
+  "install Docker manually: <url>" error if they see these distros)
+
+If you try this on a real Ubuntu box and hit an issue, please open
+one on the [issue tracker](https://github.com/pioneerAlone/openagents-stack/issues)
+with the distro version, the failing step, and the log.
 
 ---
 
@@ -167,12 +210,13 @@ python3 examples/agents/echo_agent.py
 ### Layer 4: 核心（不动，~ 1,500 行）
 
 ```
-bin/openagents-stack        # 16 个子命令 (setup/start/stop/restart/.../help)
+bin/openagents-stack        # 14 个子命令 (setup/start/stop/restart/.../help)
 lib/*.sh                    # 11 个核心库 (common/config/checks/...)
 platform/macos/*.sh         # macOS 特定
+platform/linux/*.sh         # Linux 特定 (v0.2 preview)
 install.sh                  # 一行安装
 lib/versions.lock           # 版本锁
-.github/workflows/          # CI
+.github/workflows/          # CI (lint / smoke / e2e / e2e-linux / release)
 ```
 
 ### Layer 3: deployments/（3 种部署模式）
@@ -233,12 +277,14 @@ openagents-stack --stop             # Stop docker backend
 openagents-stack --restart          # Restart docker backend
 openagents-stack --logs             # Tail docker backend logs (Ctrl-C to exit)
 openagents-stack --status           # Show backend / agents / upstream version
+openagents-stack --workspaces       # Show workspaces + token + Quick-connect URL (paste into Launcher)
 openagents-stack --upgrade          # Show latest upstream + ask to upgrade
-openagents-stack --upgrade --to     # Pin to specific launcher tag
+openagents-stack --upgrade --to     # Pin to specific launcher version
 openagents-stack --clean            # Stop + delete volumes (DATA LOSS)
 openagents-stack --reset            # Clear local state, re-run all steps
 openagents-stack --dry-run          # Print plan, change nothing
 openagents-stack --check            # Run preflight checks (no changes)
+openagents-stack --version          # Show stack + upstream versions
 openagents-stack --help             # This help
 ```
 
@@ -263,8 +309,9 @@ openagents-stack --check    # 12 项自检
 
 CI workflow:
 - **lint** — shellcheck error 级别（14s）
-- **smoke** — syntax + help + check（13s）
-- **e2e** — 端到端 install + start（workflow_dispatch）
+- **smoke** — syntax + help + check（13s, macos-latest + ubuntu-latest）
+- **e2e** — 端到端 install + start on macOS-14（workflow_dispatch, manual only）
+- **e2e-linux** — syntax + --help + --version + --dry-run + tolerated --check on ubuntu-latest（push 自动跑）
 - **release** — tag v* 自动 GitHub release
 
 ---
@@ -283,12 +330,14 @@ This project is licensed under the **MIT License** — see [LICENSE](LICENSE).
 
 ## Project stats
 
-- 14 commits, 104 files
-- 核心 16, examples 53, deployments 13, docs 7, tests 7, config 1
+- 26 commits, 109 tracked files
+- 核心 16 (bin + lib) + platform 5 (macos 3 + linux 2)
+- examples 54, deployments 13, docs 8, tests 7, .github/workflows 5
 - 6 demos + 15 mod configs + 3 agents + 4 quickstart/troubleshoot
-- 3 deployment modes
-- 25 unit tests (all PASS)
-- Architecture review: 9.4/10
+- 3 deployment modes (local-personal / lan-team / enterprise)
+- Linux preview (v0.2): Debian/Ubuntu install path shipped, real-machine e2e pending
+- 4 unit tests in test_check.sh (all PASS); e2e-linux CI runs `bash -n` + shellcheck + `--help/--version/--dry-run/--check` on every push to main
+- Architecture review (Stage 1): 9.4/10
 
 ---
 
