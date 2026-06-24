@@ -1,62 +1,39 @@
 #!/usr/bin/env bash
 # ============================================================
 # quickstart-lan.sh — 6 分钟入门 openagents-stack（局域网）
+# Thin wrapper: delegates the bootstrap (clone / PATH / install) to
+# the root install.sh, then layers LAN-specific config on top.
+# See deployments/README.md for the pattern.
 # ============================================================
 set -euo pipefail
 
-echo "============================================"
-echo "  openagents-stack Quick Start (局域网)"
-echo "  6 分钟跑起团队共享的 backend"
-echo "============================================"
-echo ""
+DEPLOY_DIR="https://raw.githubusercontent.com/pioneerAlone/openagents-stack/main/deployments/lan-team"
+INSTALL_URL="https://raw.githubusercontent.com/pioneerAlone/openagents-stack/main/install.sh"
 
-# 1. 安装
-echo "[1/4] Installing openagents-stack..."
-if [[ ! -d "$HOME/openagents-stack" ]]; then
-  git clone https://github.com/pioneerAlone/openagents-stack.git "$HOME/openagents-stack"
-fi
-cd "$HOME/openagents-stack"
+# 1. Run root installer (handles clone / pull / PATH / setup / first start)
+curl -fsSL "$INSTALL_URL" | bash
 
-mkdir -p "$HOME/.local/bin"
-ln -sf "$HOME/openagents-stack/bin/openagents-stack" "$HOME/.local/bin/openagents-stack"
-export PATH="$HOME/.local/bin:$PATH"
+# 2. Apply LAN config (binds to 0.0.0.0, simple auth, prints LAN IP)
+export OPENAGENTS_STACK_HOME="$HOME/openagents-stack"
+curl -fsSL "$DEPLOY_DIR/config.lan.yaml" -o "$OPENAGENTS_STACK_HOME/config.yaml"
 
-# 2. 配置 LAN IP
-LAN_IP=$(ipconfig getifaddr en0 2>/dev/null || echo "192.168.1.100")
-echo "[2/4] Configuring LAN (IP: $LAN_IP)..."
-export OPENAGENTS_ENDPOINT="http://$LAN_IP:8000"
+# 3. Re-run setup so the new bind_address is honored, then restart
+"$OPENAGENTS_STACK_HOME/bin/openagents-stack"
+"$OPENAGENTS_STACK_HOME/bin/openagents-stack" --start
 
-# 3. 配置 config（简单用户名+密码）
-cat > "$HOME/openagents-stack/config.lan.yaml" <<EOF
-openagents_stack:
-  backend_port: 8000
-  bind_address: "0.0.0.0"
-  workspace_name: team-shared
-auth:
-  type: simple
-  users:
-    - username: admin
-      password_hash: "\$2b\$12\$LJ3m4ys3GZqLzEpKqWxF.OQc.QoFQYE"
-EOF
+# 4. Start the hello_world demo (proves the install works end-to-end)
+(cd "$OPENAGENTS_STACK_HOME/examples/demos/hello_world" && ./run.sh) &
 
-# 4. 启动
-echo "[3/4] Running setup + start..."
-./bin/openagents-stack --config config.lan.yaml
-./bin/openagents-stack --start --bind 0.0.0.0
-
-# 5. Hello world
-echo "[4/4] Starting hello_world demo..."
-cd examples/demos/hello_world && ./run.sh
-
+# 5. Print the LAN URL
+LAN_IP=$(ipconfig getifaddr en0 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo "unknown")
 echo ""
 echo "============================================"
-echo "  Ready!"
-echo ""
-echo "  本机:  http://localhost:8000"
-echo "  团队:  http://$LAN_IP:8000"
-echo "  Studio: http://localhost:8050"
-echo ""
-echo "  团队成员执行 (不用装 docker):"
+echo "  ✅ LAN mode ready"
+echo "  Local:  http://localhost:8000"
+echo "  LAN:    http://$LAN_IP:8000"
+echo "  Studio: http://localhost:8050 (started by demo in background)"
+echo "============================================"
+echo "  Team members on the same network only need:"
 echo "    export OPENAGENTS_ENDPOINT=http://$LAN_IP:8000"
-echo "    openagents-stack --start  # 只连到你的 backend"
+echo "    (no docker, no monorepo — just the agn CLI)"
 echo "============================================"

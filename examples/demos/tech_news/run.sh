@@ -1,5 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+# Resolve STACK_HOME the same way hello_world/run.sh does: env override,
+# then follow the symlink at ~/.local/bin/openagents-stack back to its
+# target, then fall back to install.sh's default.
+OPENAGENTS_STACK_HOME="${OPENAGENTS_STACK_HOME:-}"
+if [[ -z "$OPENAGENTS_STACK_HOME" ]]; then
+  if command -v openagents-stack >/dev/null 2>&1; then
+    _bin="$(command -v openagents-stack)"
+    [[ -L "$_bin" ]] && _bin="$(readlink "$_bin")"
+    OPENAGENTS_STACK_HOME="$(cd "$(dirname "$_bin")/.." && pwd)"
+  else
+    OPENAGENTS_STACK_HOME="$HOME/openagents-stack"
+  fi
+fi
 OPENAGENTS_MONOREPO="${OPENAGENTS_HOME:-$HOME/openagents}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -11,7 +25,7 @@ if ! python3 -m openagents --help > /dev/null 2>&1; then
 fi
 
 echo "[1/4] Starting backend..."
-cd ~/proj/openagents-stack && ./bin/openagents-stack --start 2>/dev/null || true
+"$OPENAGENTS_STACK_HOME/bin/openagents-stack" --start 2>/dev/null || true
 
 echo "[2/4] Starting network..."
 cd "$OPENAGENTS_MONOREPO" && python3 -m openagents network start "$SCRIPT_DIR" &
