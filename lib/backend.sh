@@ -118,9 +118,8 @@ step_start_backend() {
     ans="${ans:-n}"
     if [[ "$ans" == "y" || "$ans" == "Y" ]]; then
       log "  Stopping existing container..."
-      cd "$OPENAGENTS_HOME/workspace"
-      docker compose -p "${COMPOSE_PROJECT}" down 2>/dev/null || true
-      cd - >/dev/null
+      (cd "$OPENAGENTS_HOME/workspace" && \
+        docker compose -p "${COMPOSE_PROJECT}" down 2>/dev/null) || true
     else
       log "  Leaving existing container. Will not start new one."
       return 1
@@ -143,9 +142,9 @@ step_start_backend() {
   fi
 
   # 3b. Start docker
-  cd "$OPENAGENTS_HOME/workspace"
   log "  Starting docker compose (db + backend)..."
-  docker compose -p "${COMPOSE_PROJECT}" up -d db backend
+  (cd "$OPENAGENTS_HOME/workspace" && \
+    docker compose -p "${COMPOSE_PROJECT}" up -d db backend)
 
   # 3c. Wait for health
   log "  Waiting for backend health (max 60s)..."
@@ -177,7 +176,8 @@ Debug steps:
 
   # 3d. Run migrations
   log "  Running alembic migrations..."
-  docker compose -p "${COMPOSE_PROJECT}" exec -T backend alembic upgrade head
+  (cd "$OPENAGENTS_HOME/workspace" && \
+    docker compose -p "${COMPOSE_PROJECT}" exec -T backend alembic upgrade head)
 
   done_step step_start_backend
   ok "Backend ready"
@@ -213,12 +213,9 @@ git_clone_monorepo() {
 
 step_stop_backend() {
   log "Stopping backend..."
-  local prev_dir
-  prev_dir=$(pwd)
   if [[ -d "$OPENAGENTS_HOME/workspace" ]]; then
-    cd "$OPENAGENTS_HOME/workspace"
-    docker compose -p "${COMPOSE_PROJECT}" stop 2>/dev/null || true
-    cd "$prev_dir"
+    (cd "$OPENAGENTS_HOME/workspace" && \
+      docker compose -p "${COMPOSE_PROJECT}" stop 2>/dev/null) || true
   else
     warn "Monorepo not cloned at $OPENAGENTS_HOME/workspace; nothing to stop"
   fi
@@ -227,12 +224,9 @@ step_stop_backend() {
 
 step_clean_backend() {
   log "Cleaning backend (down + delete volumes)..."
-  local prev_dir
-  prev_dir=$(pwd)
   if [[ -d "$OPENAGENTS_HOME/workspace" ]]; then
-    cd "$OPENAGENTS_HOME/workspace"
-    docker compose -p "${COMPOSE_PROJECT}" down -v 2>/dev/null || true
-    cd "$prev_dir"
+    (cd "$OPENAGENTS_HOME/workspace" && \
+      docker compose -p "${COMPOSE_PROJECT}" down -v 2>/dev/null) || true
   else
     warn "Monorepo not cloned; attempting docker compose down anyway"
     docker compose -p "${COMPOSE_PROJECT}" down -v 2>/dev/null || true

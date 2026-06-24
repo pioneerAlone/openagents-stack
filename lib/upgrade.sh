@@ -128,9 +128,10 @@ EOF
 
   # Restart backend
   log "Restarting backend..."
-  cd "$OPENAGENTS_HOME/workspace"
-  docker compose -p "${COMPOSE_PROJECT}" down 2>/dev/null || true
-  docker compose -p "${COMPOSE_PROJECT}" up -d db backend
+  (cd "$OPENAGENTS_HOME/workspace" && \
+    docker compose -p "${COMPOSE_PROJECT}" down 2>/dev/null) || true
+  (cd "$OPENAGENTS_HOME/workspace" && \
+    docker compose -p "${COMPOSE_PROJECT}" up -d db backend)
 
   # Wait for health
   for i in {1..30}; do
@@ -138,7 +139,8 @@ EOF
     # so upgrade doesn't drift from the project's known-good endpoints.
     if probe_backend_health; then
       ok "Backend healthy after upgrade (via ${BACKEND_HEALTH_MATCHED})"
-      docker compose -p "${COMPOSE_PROJECT}" exec -T backend alembic upgrade head
+      (cd "$OPENAGENTS_HOME/workspace" && \
+        docker compose -p "${COMPOSE_PROJECT}" exec -T backend alembic upgrade head)
       return 0
     fi
     sleep 2

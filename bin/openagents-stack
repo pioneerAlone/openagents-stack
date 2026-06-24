@@ -145,8 +145,8 @@ cmd_logs() {
     err "Monorepo not cloned at $OPENAGENTS_HOME. Run: openagents-stack first."
   fi
   log "Tailing backend logs (Ctrl-C to exit)..."
-  cd "$OPENAGENTS_HOME/workspace"
-  docker compose -p "${COMPOSE_PROJECT}" logs -f --tail 50 backend
+  (cd "$OPENAGENTS_HOME/workspace" && \
+    exec docker compose -p "${COMPOSE_PROJECT}" logs -f --tail 50 backend)
 }
 
 cmd_clean() {
@@ -206,18 +206,17 @@ print_summary() {
   cat <<EOF
 
 ============================================
-  openagents-stack setup complete!
-  (dependencies installed; backend NOT started)
+  openagents-stack setup (1/2) complete
+  Dependencies installed; backend NOT started yet.
+
+  2/2 next: openagents-stack --start
 
 ⚠️  Activate env vars in current shell:
     source $rc_file
 
 Or open a new terminal.
 
-Next steps (in order):
-  1. source $rc_file
-  2. Start the backend:
-     openagents-stack --start
+After --start, the rest of the workflow:
   3. Open OpenAgents Launcher (menu bar)
   4. Launcher → Add Workspace → paste URL:
      http://localhost:$OPENAGENTS_BACKEND_PORT
